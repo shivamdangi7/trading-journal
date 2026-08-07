@@ -133,6 +133,7 @@
 <div id="app" style="display:none;">
   <header>
     <span class="brand">📓 Trading Journal</span>
+    <span id="gistIndicator" style="color:var(--text-dim); font-size:11px;" title="The gist ID your entries are stored in -- should be IDENTICAL across every device you connect from. If two devices show different IDs here, they're not synced."></span>
     <div class="spacer"></div>
     <button class="tool primary" id="addTradeBtn">+ Add Trade</button>
     <button class="tool danger" id="disconnectBtn">Disconnect</button>
@@ -184,13 +185,22 @@ async function ensureGist() {
   // gists for one matching this app's own fixed description before ever
   // creating a new one.
   const listRes = await fetch("https://api.github.com/gists?per_page=100", { headers: ghHeaders() });
-  if (listRes.ok) {
-    const gists = await listRes.json();
-    const found = gists.find((g) => g.description === GIST_DESCRIPTION && g.files[GIST_FILENAME]);
-    if (found) {
-      localStorage.setItem(GIST_ID_KEY, found.id);
-      return found.id;
-    }
+  if (!listRes.ok) {
+    // Don't silently fall through to creating ANOTHER new gist just
+    // because this check failed -- a bad/wrong-scoped token (e.g. a
+    // fine-grained token, which doesn't support gists at all) would
+    // otherwise keep masking itself behind a fresh empty gist every
+    // time, looking like "it's not syncing" instead of the real error.
+    throw new Error(
+      `Couldn't list your gists (HTTP ${listRes.status}) -- make sure this is a CLASSIC token `
+      + `(github.com/settings/tokens, not the fine-grained kind) with the 'gist' scope checked.`
+    );
+  }
+  const gists = await listRes.json();
+  const found = gists.find((g) => g.description === GIST_DESCRIPTION && g.files[GIST_FILENAME]);
+  if (found) {
+    localStorage.setItem(GIST_ID_KEY, found.id);
+    return found.id;
   }
 
   const res = await fetch("https://api.github.com/gists", {
@@ -593,6 +603,7 @@ async function boot() {
   await loadTrades();
   document.getElementById("setupScreen").style.display = "none";
   document.getElementById("app").style.display = "";
+  document.getElementById("gistIndicator").textContent = `gist: ${getGistId().slice(0, 8)}`;
   render();
 }
 
