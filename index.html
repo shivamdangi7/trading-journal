@@ -560,8 +560,14 @@ async function deleteTrade(id) {
 
 document.getElementById("addTradeBtn").addEventListener("click", () => openModal(null));
 document.getElementById("disconnectBtn").addEventListener("click", () => {
-  if (!confirm("Disconnect? This only clears the token from THIS browser -- your data stays safe in the gist.")) return;
+  if (!confirm("Disconnect? This only clears the token AND cached gist ID from THIS browser -- your data stays safe in the gist.")) return;
+  // Also clear the cached gist ID, not just the token -- a device that
+  // connected before the multi-device fix (or ever hit a wrong gist for
+  // any other reason) would otherwise keep reusing that same cached ID
+  // forever, since ensureGist() returns early the moment ANY ID is
+  // cached, never re-running the find-by-description lookup.
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(GIST_ID_KEY);
   location.reload();
 });
 document.getElementById("modalBackdrop").addEventListener("click", (e) => {
