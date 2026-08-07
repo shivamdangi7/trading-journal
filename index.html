@@ -156,6 +156,7 @@
 
 <script>
 const GIST_FILENAME = "trades.json";
+const GIST_DESCRIPTION = "Trading journal data (private)";
 const TOKEN_KEY = "journal_gh_token";
 const GIST_ID_KEY = "journal_gist_id";
 
@@ -174,11 +175,29 @@ function ghHeaders() {
 async function ensureGist() {
   const existing = getGistId();
   if (existing) return existing;
+
+  // The gist ID is only cached in THIS browser's local storage -- the
+  // first device to ever connect creates the gist, but every device
+  // after that must find and reuse the SAME one, or it silently starts
+  // its own separate, empty journal (exactly what happened connecting
+  // from a second device before this fix). Search the account's own
+  // gists for one matching this app's own fixed description before ever
+  // creating a new one.
+  const listRes = await fetch("https://api.github.com/gists?per_page=100", { headers: ghHeaders() });
+  if (listRes.ok) {
+    const gists = await listRes.json();
+    const found = gists.find((g) => g.description === GIST_DESCRIPTION && g.files[GIST_FILENAME]);
+    if (found) {
+      localStorage.setItem(GIST_ID_KEY, found.id);
+      return found.id;
+    }
+  }
+
   const res = await fetch("https://api.github.com/gists", {
     method: "POST",
     headers: ghHeaders(),
     body: JSON.stringify({
-      description: "Trading journal data (private)",
+      description: GIST_DESCRIPTION,
       public: false,
       files: { [GIST_FILENAME]: { content: "[]" } },
     }),
