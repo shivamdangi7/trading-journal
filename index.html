@@ -90,6 +90,29 @@
   .form-field .hint { font-size: 10.5px; color: var(--text-dim); }
   .modal-actions { display: flex; justify-content: space-between; margin-top: 16px; }
   .modal-actions .right { display: flex; gap: 8px; }
+
+  #cardWrap { display: none; }
+  .trade-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 10px; cursor: pointer;
+  }
+  .trade-card .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .trade-card .top-row .sym { font-weight: 700; font-size: 15px; }
+  .trade-card .top-row .pl { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .trade-card .meta-row { display: flex; flex-wrap: wrap; gap: 10px 14px; color: var(--text-dim); font-size: 11.5px; margin-bottom: 6px; }
+  .trade-card .meta-row b { color: var(--text); font-weight: 500; }
+  .trade-card .reason { font-size: 12px; color: var(--text-dim); }
+
+  @media (max-width: 700px) {
+    header { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+    header .brand { flex: 1 0 100%; }
+    main { padding: 12px; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    #tableWrap { display: none; }
+    #cardWrap { display: block; }
+    .form-grid { grid-template-columns: 1fr; }
+    #setupScreen { margin: 30px auto; padding: 0 16px; }
+  }
 </style>
 </head>
 <body>
@@ -123,6 +146,7 @@
         <tbody id="tbody"></tbody>
       </table>
     </div>
+    <div id="cardWrap"></div>
   </main>
 </div>
 
@@ -308,11 +332,59 @@ function renderRows() {
   );
 }
 
+// Narrow-screen equivalent of renderRows() -- same underlying trades,
+// same click-to-edit behavior, just laid out as stacked cards instead of
+// a 14-column table nobody can read on a phone without scrolling
+// sideways. Toggled via the @media(max-width:700px) rule in <style>,
+// not a JS resize listener -- both #tableWrap/#cardWrap always render,
+// CSS just shows one.
+function renderCards() {
+  let rows = state.trades.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  if (state.tab !== "all") rows = rows.filter((t) => t.status === state.tab);
+
+  const cardWrap = document.getElementById("cardWrap");
+  if (!rows.length) {
+    cardWrap.innerHTML = `<div id="emptyStub">No trades yet -- click "+ Add Trade" to log one.</div>`;
+    return;
+  }
+
+  cardWrap.innerHTML = rows.map((t) => {
+    const plCls = (t.plPct || 0) > 0 ? "pos" : (t.plPct || 0) < 0 ? "neg" : "";
+    const days = t.days !== null && t.days !== undefined ? t.days : daysBetween(t.date, t.exitDate);
+    const plText = t.plPct !== null && t.plPct !== undefined
+      ? (t.plPct > 0 ? "+" : "") + fmt(t.plPct, 2) + "%" : "—";
+    return `<div class="trade-card" data-id="${t.id}">
+      <div class="top-row">
+        <span class="sym">${t.symbol || ""}</span>
+        <span class="pl ${plCls}">${plText}</span>
+      </div>
+      <div class="meta-row">
+        <span>${dash(t.date)}</span>
+        <span><b>${dash(t.direction)}</b></span>
+        <span class="pill ${t.status === "Open" ? "open" : "closed"}">${t.status}</span>
+      </div>
+      <div class="meta-row">
+        <span>Entry <b>${dash(fmt(t.entry))}</b></span>
+        <span>SL <b>${dash(fmt(t.stoploss))}</b></span>
+        <span>Risk <b>${dash(fmt(t.riskPct, 2) ? fmt(t.riskPct, 2) + "%" : null)}</b></span>
+        ${t.exitedAt !== null && t.exitedAt !== undefined ? `<span>Exit <b>${fmt(t.exitedAt)}</b></span>` : ""}
+        ${days !== null && days !== undefined ? `<span>${days}d</span>` : ""}
+      </div>
+      ${t.reasonForTrading ? `<div class="reason">${t.reasonForTrading}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  document.querySelectorAll(".trade-card").forEach((el) =>
+    el.addEventListener("click", () => openModal(el.dataset.id))
+  );
+}
+
 function render() {
   renderStats();
   renderTabs();
   renderHead();
   renderRows();
+  renderCards();
 }
 
 // ---- Add/Edit modal ----
