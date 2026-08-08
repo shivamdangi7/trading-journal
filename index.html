@@ -263,6 +263,21 @@ function plPct(entry, exitedAt, direction) {
   if (!entry || exitedAt === null || exitedAt === undefined || exitedAt === "") return null;
   return direction === "Short" ? (entry - exitedAt) / entry * 100 : (exitedAt - entry) / entry * 100;
 }
+// Exited @ accepts EITHER a literal price (e.g. "647.45") OR a percentage
+// move from Entry (e.g. "5%" or "-3%") -- a trailing "%" switches it to the
+// percentage path, calculated relative to Entry and Direction so a "5%"
+// gain resolves to the correct side of Entry for a Short trade too.
+function resolveExitPrice(raw, entry, direction) {
+  const trimmed = (raw || "").trim();
+  if (trimmed === "") return null;
+  if (trimmed.endsWith("%")) {
+    const pct = parseFloat(trimmed.slice(0, -1));
+    if (Number.isNaN(pct) || !entry) return null;
+    return direction === "Short" ? entry * (1 - pct / 100) : entry * (1 + pct / 100);
+  }
+  const num = parseFloat(trimmed);
+  return Number.isNaN(num) ? null : num;
+}
 
 function computeStats(trades) {
   const open = trades.filter((t) => t.status === "Open");
@@ -458,7 +473,10 @@ function openModal(id) {
         <textarea id="f_reasonForTrading">${t.reasonForTrading || ""}</textarea>
       </div>
       <div class="form-field"><label>Exit Date</label><input type="date" id="f_exitDate" value="${t.exitDate || ""}"></div>
-      <div class="form-field"><label>Exited @</label><input type="number" step="any" id="f_exitedAt" value="${t.exitedAt ?? ""}"></div>
+      <div class="form-field">
+        <label>Exited @</label><input type="text" id="f_exitedAt" value="${t.exitedAt ?? ""}" placeholder="e.g. 647.45 or 5%">
+        <span class="hint">Type a price, or a % move from Entry (e.g. "5%" or "-3%") -- it'll be converted automatically</span>
+      </div>
       <div class="form-field full"><label>Reason of Booking</label>
         <input type="text" id="f_reasonOfBooking" value="${t.reasonOfBooking || ""}" placeholder="Target hit / Stopped out / Manual exit">
       </div>
@@ -514,7 +532,7 @@ async function saveTrade(id) {
   const riskRaw = document.getElementById("f_riskPct").value;
   const direction = document.getElementById("f_direction").value;
   const exitedAtRaw = document.getElementById("f_exitedAt").value;
-  const exitedAt = exitedAtRaw !== "" ? parseFloat(exitedAtRaw) : null;
+  const exitedAt = resolveExitPrice(exitedAtRaw, entry, direction);
   const exitDate = document.getElementById("f_exitDate").value || null;
   const date = document.getElementById("f_date").value || null;
 
