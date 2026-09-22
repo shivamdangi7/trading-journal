@@ -127,11 +127,25 @@
   .wl-card .meta-row { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
   .wl-card .meta-row b { color: var(--text); font-weight: 500; }
   .wl-card .actions { display: flex; gap: 8px; }
-  .wl-card .actions button, .wl-card .actions a {
+  .wl-card .actions button, .wl-card .actions a, .wl-card .actions select {
     flex: 1; text-align: center; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border);
     background: transparent; color: var(--text); cursor: pointer; font-size: 11.5px; text-decoration: none;
+    font-family: inherit;
   }
   .wl-card .actions button:hover, .wl-card .actions a:hover { border-color: var(--accent); color: var(--accent); }
+  .wl-card .actions.wl-edit-row { margin-top: 8px; }
+  .wl-card .actions select { background: var(--panel); }
+  .wl-card .actions button.danger { color: var(--bad); }
+  .wl-card .actions button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  .wl-add-form { display: flex; gap: 6px; flex: 1; min-width: 0; }
+  .wl-add-form input {
+    flex: 1; min-width: 0; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-size: 12.5px; font-family: inherit;
+  }
+  .wl-add-form select {
+    padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-size: 12.5px; font-family: inherit;
+  }
 
   @media (max-width: 700px) {
     header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
@@ -155,8 +169,10 @@
       font-size: 16px;
     }
     #watchlistPage .wl-toolbar { flex-wrap: wrap; }
+    .wl-add-form { flex: 1 0 100%; }
     .wl-grid { grid-template-columns: 1fr; }
-    .wl-card .actions button, .wl-card .actions a { padding: 8px 10px; }
+    .wl-card .actions button, .wl-card .actions a, .wl-card .actions select { padding: 8px 10px; }
+    .wl-add-form input, .wl-add-form select { font-size: 16px; }
   }
 </style>
 </head>
@@ -218,7 +234,7 @@ const GIST_ID_KEY = "journal_gist_id";
 // loadWatchlist() below.
 const WATCHLIST_GIST_FILENAME = "scanx_watchlist.json";
 
-let state = { trades: [], tab: "all", editingId: null, page: "journal", watchlist: [], watchlistAsOf: null };
+let state = { trades: [], tab: "all", editingId: null, page: "journal", watchlist: [], watchlistAsOf: null, watchlistAdding: false };
 
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function getGistId() { return localStorage.getItem(GIST_ID_KEY); }
@@ -294,10 +310,7 @@ async function saveTrades() {
   if (!res.ok) throw new Error(`Couldn't save gist: HTTP ${res.status}`);
 }
 
-// Read-only from this side -- ScanX (its own Settings tab, a "Sync Now"
-// button or automatically on every star-click) is the only thing that
-// ever WRITES scanx_watchlist.json; this journal only ever reads it. A
-// SEPARATE fetch from loadTrades() above (not merged into one gist call)
+// A SEPARATE fetch from loadTrades() above (not merged into one gist call)
 // so a ScanX-sync problem can never block trades from loading, and vice
 // versa -- each page degrades independently. gist.files simply won't
 // have this key at all until ScanX has synced at least once -- that's a
@@ -310,6 +323,94 @@ async function loadWatchlist() {
   const file = data.files[WATCHLIST_GIST_FILENAME];
   state.watchlist = file ? JSON.parse(file.content || "[]") : [];
   state.watchlistAsOf = new Date().toISOString();
+}
+
+// Both apps can now write scanx_watchlist.json (ScanX still owns the
+// enriched fields -- price/industry/conviction/setup -- it recomputes
+// those from its own live data on its next sync regardless of what this
+// side writes). To avoid one side's push silently clobbering the other's
+// concurrent edit: entries carry updated_at, bumped on every edit from
+// EITHER side; ScanX's own pull-merge (scanx/server/app.py) only accepts
+// a remote entry when its updated_at is newer than what ScanX already
+// has, so an edit made here always survives until ScanX has actually
+// seen it. A removal is written as a `removed: true` tombstone rather
+// than deleted outright -- deleting it here would mean ScanX (which
+// still has the symbol in its own watchlist) never learns it was
+// removed, and would just re-add it on its next push. Once ScanX's own
+// pull-merge applies the removal, its next push regenerates the file
+// from its own watchlist (which no longer has the symbol) -- the
+// tombstone disappears on its own, nothing here needs to clean it up.
+async function saveWatchlist() {
+  const gistId = await ensureGist();
+  const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+    method: "PATCH",
+    headers: ghHeaders(),
+    body: JSON.stringify({ files: { [WATCHLIST_GIST_FILENAME]: { content: JSON.stringify(state.watchlist, null, 2) } } }),
+  });
+  if (!res.ok) throw new Error(`Couldn't save gist: HTTP ${res.status}`);
+}
+
+// Mirrors scanx/server/app.py's own _tv_link() -- kept in sync by hand,
+// same disclosed reasoning as that function's own docstring (the one
+// place a frontend-only helper needed a server-side twin, now also
+// needed here since a journal-added symbol has no ScanX-computed link
+// until ScanX's next sync).
+function tvLink(symbol, market) {
+  const tvSymbol = symbol.replace(/&/g, "_");
+  const prefix = market === "US" ? "" : "NSE:";
+  return `https://www.tradingview.com/chart/?symbol=${prefix}${tvSymbol}`;
+}
+
+async function setWatchlistPriority(symbol, priority) {
+  const entry = state.watchlist.find((r) => r.symbol === symbol);
+  if (!entry) return;
+  const prev = entry.priority;
+  entry.priority = priority || null;
+  entry.updated_at = new Date().toISOString();
+  try {
+    await saveWatchlist();
+    render();
+  } catch (e) {
+    entry.priority = prev;
+    alert("Couldn't save priority: " + e.message);
+    render();
+  }
+}
+
+async function removeFromWatchlist(symbol) {
+  if (!confirm(`Remove ${symbol} from the watchlist?`)) return;
+  const entry = state.watchlist.find((r) => r.symbol === symbol);
+  if (!entry) return;
+  entry.removed = true;
+  entry.updated_at = new Date().toISOString();
+  try {
+    await saveWatchlist();
+    render();
+  } catch (e) {
+    delete entry.removed;
+    alert("Couldn't remove: " + e.message);
+    render();
+  }
+}
+
+async function addToWatchlist(symbolRaw, market) {
+  const symbol = symbolRaw.trim().toUpperCase();
+  if (!symbol) return;
+  const existing = state.watchlist.find((r) => r.symbol === symbol);
+  if (existing && !existing.removed) { alert(`${symbol} is already on the watchlist.`); return; }
+  const now = new Date().toISOString();
+  if (existing) {
+    // Was a tombstoned removal ScanX hasn't pulled yet -- resurrect it
+    // rather than push a duplicate entry for the same symbol.
+    delete existing.removed;
+    existing.updated_at = now;
+  } else {
+    state.watchlist.push({
+      symbol, market, ltp: null, pct_change: null, industry: null, conviction: null, setup: null,
+      priority: null, added_at: now, updated_at: now, tv_link: tvLink(symbol, market),
+    });
+  }
+  await saveWatchlist();
 }
 
 function fmt(n, digits = 2) {
@@ -531,24 +632,74 @@ function logTradeFromWatchlist(symbol) {
   document.getElementById("f_date").value = new Date().toISOString().slice(0, 10);
 }
 
+function addSymbolFormHtml() {
+  if (!state.watchlistAdding) return `<button class="tool" id="showAddWatchlistBtn">+ Add Symbol</button>`;
+  return `
+    <span class="wl-add-form">
+      <input id="addWatchlistSymbol" placeholder="Symbol, e.g. TCS" autocapitalize="characters">
+      <select id="addWatchlistMarket"><option value="IN">IN</option><option value="US">US</option></select>
+      <button class="tool primary" id="confirmAddWatchlistBtn">Add</button>
+      <button class="tool" id="cancelAddWatchlistBtn">Cancel</button>
+    </span>`;
+}
+
+function wireAddSymbolForm() {
+  if (!state.watchlistAdding) {
+    document.getElementById("showAddWatchlistBtn").addEventListener("click", () => {
+      state.watchlistAdding = true;
+      renderWatchlistPage();
+      document.getElementById("addWatchlistSymbol")?.focus();
+    });
+    return;
+  }
+  document.getElementById("cancelAddWatchlistBtn").addEventListener("click", () => {
+    state.watchlistAdding = false;
+    renderWatchlistPage();
+  });
+  const submit = async () => {
+    const symbolEl = document.getElementById("addWatchlistSymbol");
+    const marketEl = document.getElementById("addWatchlistMarket");
+    const symbol = symbolEl.value;
+    if (!symbol.trim()) { symbolEl.focus(); return; }
+    const btn = document.getElementById("confirmAddWatchlistBtn");
+    btn.disabled = true; btn.textContent = "Adding...";
+    try {
+      await addToWatchlist(symbol, marketEl.value);
+      state.watchlistAdding = false;
+      render();
+    } catch (e) {
+      alert("Couldn't add: " + e.message);
+      btn.disabled = false; btn.textContent = "Add";
+    }
+  };
+  document.getElementById("confirmAddWatchlistBtn").addEventListener("click", submit);
+  document.getElementById("addWatchlistSymbol").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+}
+
 function renderWatchlistPage() {
   const view = document.getElementById("watchlistPage");
-  const rows = state.watchlist;
+  // removed:true entries are tombstones for ScanX's own pull-merge (see
+  // removeFromWatchlist()'s comment) -- never shown here.
+  const rows = state.watchlist.filter((r) => !r.removed);
   const asOfText = state.watchlistAsOf ? `Loaded ${new Date(state.watchlistAsOf).toLocaleTimeString()}` : "";
 
   if (!rows.length) {
     view.innerHTML = `
       <div class="wl-toolbar">
         <button class="tool" id="refreshWatchlistBtn">&#8635; Refresh</button>
+        ${addSymbolFormHtml()}
         <span class="meta">${asOfText}</span>
       </div>
       <div id="emptyStub">
         No watchlist synced from ScanX yet.<br><br>
         In ScanX &rarr; Settings &rarr; Trading Journal Sync, paste a GitHub token (the SAME kind this
         journal's own setup screen asked for -- 'gist' scope) and click "Sync Now", or star a stock --
-        it syncs automatically from then on.
+        it syncs automatically from then on. Or add a symbol here yourself with "+ Add Symbol" above.
       </div>`;
     document.getElementById("refreshWatchlistBtn").addEventListener("click", refreshWatchlist);
+    wireAddSymbolForm();
     return;
   }
 
@@ -566,6 +717,7 @@ function renderWatchlistPage() {
   view.innerHTML = `
     <div class="wl-toolbar">
       <button class="tool" id="refreshWatchlistBtn">&#8635; Refresh</button>
+      ${addSymbolFormHtml()}
       <span class="meta">${rows.length} stock${rows.length === 1 ? "" : "s"} &middot; ${asOfText}</span>
     </div>
     <div class="wl-grid">
@@ -593,13 +745,29 @@ function renderWatchlistPage() {
             <button data-log-symbol="${r.symbol}">+ Log Trade</button>
             ${r.tv_link ? `<a href="${r.tv_link}" target="_blank" rel="noopener">Chart &#8599;</a>` : ""}
           </div>
+          <div class="actions wl-edit-row">
+            <select data-priority-symbol="${r.symbol}">
+              <option value="" ${!r.priority ? "selected" : ""}>No priority</option>
+              <option value="high" ${r.priority === "high" ? "selected" : ""}>High</option>
+              <option value="medium" ${r.priority === "medium" ? "selected" : ""}>Medium</option>
+              <option value="low" ${r.priority === "low" ? "selected" : ""}>Low</option>
+            </select>
+            <button class="danger" data-remove-symbol="${r.symbol}">Remove</button>
+          </div>
         </div>`;
       }).join("")}
     </div>`;
 
   document.getElementById("refreshWatchlistBtn").addEventListener("click", refreshWatchlist);
+  wireAddSymbolForm();
   document.querySelectorAll("[data-log-symbol]").forEach((el) =>
     el.addEventListener("click", () => logTradeFromWatchlist(el.dataset.logSymbol))
+  );
+  document.querySelectorAll("[data-priority-symbol]").forEach((el) =>
+    el.addEventListener("change", () => setWatchlistPriority(el.dataset.prioritySymbol, el.value))
+  );
+  document.querySelectorAll("[data-remove-symbol]").forEach((el) =>
+    el.addEventListener("click", () => removeFromWatchlist(el.dataset.removeSymbol))
   );
 }
 
