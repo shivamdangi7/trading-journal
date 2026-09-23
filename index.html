@@ -2,177 +2,469 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Trading Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0b0d10; --panel: #12151a; --border: #232830; --text: #e6e8eb; --text-dim: #8a919c;
-    --accent: #4fd1a5; --bad: #f06a6a; --warn: #e0b34a; --pill-bg: #1a1e24;
+    --bg: #090c10;
+    --panel: #11151d;
+    --card: #151a24;
+    --card-hover: #1c2230;
+    --border: #1e2634;
+    --border-light: #2a3447;
+    --text: #f0f3f8;
+    --text-dim: #8b94a5;
+    --text-muted: #576071;
+    --purple: #7c5cfc;
+    --purple-glow: rgba(124, 92, 252, 0.35);
+    --purple-bg: #1c1836;
+    --accent: #00e676;
+    --bad: #ff4d4d;
+    --bad-bg: #2c1219;
+    --warn: #ffb74d;
+    --warn-bg: #2b2210;
+    --good-bg: #0d281e;
+    --pill-bg: #1a202c;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 13px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px; line-height: 1.4;
+    padding-bottom: 70px;
   }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Header */
   header {
-    display: flex; align-items: center; gap: 14px; padding: 12px 18px;
-    border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10;
+    background: var(--bg);
+    padding: 14px 16px 10px;
+    position: sticky; top: 0; z-index: 40;
+    border-bottom: 1px solid var(--border);
   }
-  header .brand { font-weight: 700; font-size: 15px; }
-  header .spacer { flex: 1; }
-  .page-nav { display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 3px; }
-  .page-nav button {
-    padding: 5px 12px; border-radius: 6px; border: none; background: transparent;
-    color: var(--text-dim); cursor: pointer; font-size: 12.5px; font-weight: 500;
+  .header-top {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
   }
-  .page-nav button.active { background: var(--pill-bg); color: var(--text); }
-  .header-actions { display: flex; gap: 8px; }
-  button.tool {
-    padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel); color: var(--text); cursor: pointer; font-size: 12.5px; font-weight: 500;
+  .brand-group { display: flex; align-items: center; gap: 10px; }
+  .brand-icon {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, #1c2230 0%, #11151d 100%);
+    border: 1px solid var(--border-light);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text);
   }
-  button.tool:hover { border-color: var(--accent); }
-  button.tool.primary { background: var(--accent); color: #06110c; border-color: var(--accent); }
-  button.tool.danger { color: var(--bad); }
-  main { padding: 18px; max-width: 1400px; margin: 0 auto; }
+  .brand-title { font-weight: 700; font-size: 16px; color: var(--text); letter-spacing: -0.01em; }
+  .brand-subtitle { font-size: 11px; color: var(--text-dim); margin-top: 1px; }
 
-  #setupScreen { max-width: 520px; margin: 60px auto; text-align: center; }
-  #setupScreen h1 { font-size: 20px; margin-bottom: 6px; }
+  .header-actions { display: flex; align-items: center; gap: 6px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 10px; border: none;
+    background: transparent; color: var(--text-dim); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .icon-btn:hover, .icon-btn:active { background: var(--panel); color: var(--text); }
+
+  /* Tab Segment Bar */
+  .segmented-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .segmented-control {
+    flex: 1; display: flex; background: #0d1117; border: 1px solid var(--border);
+    border-radius: 12px; padding: 3px; gap: 2px;
+  }
+  .segment-btn {
+    flex: 1; padding: 8px 12px; border-radius: 99px; border: none; background: transparent;
+    color: var(--text-dim); font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s ease; position: relative; text-align: center;
+  }
+  .segment-btn.active {
+    background: var(--card); color: var(--text); font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+  .segment-btn.active::after {
+    content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px;
+    background: var(--purple); border-radius: 2px 2px 0 0;
+  }
+
+  .btn-add-primary {
+    display: flex; align-items: center; gap: 5px; padding: 8px 16px;
+    border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #6c47ff 0%, #8c52ff 100%);
+    color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+    box-shadow: 0 4px 12px var(--purple-glow); transition: transform 0.1s active;
+  }
+  .btn-add-primary:active { transform: scale(0.96); }
+
+  /* Main Container */
+  main { padding: 14px 16px; max-width: 1200px; margin: 0 auto; }
+
+  /* Setup Screen */
+  #setupScreen { max-width: 480px; margin: 40px auto; padding: 24px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); text-align: center; }
+  #setupScreen h1 { font-size: 22px; margin: 0 0 8px; }
   #setupScreen p { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
-  #setupScreen ol { text-align: left; color: var(--text-dim); font-size: 12.5px; line-height: 1.7; }
+  #setupScreen ol { text-align: left; color: var(--text-dim); font-size: 12.5px; line-height: 1.7; padding-left: 20px; }
   #setupScreen input {
-    width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel); color: var(--text); font-size: 13px; margin: 10px 0;
+    width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-light);
+    background: var(--bg); color: var(--text); font-size: 14px; margin: 14px 0; outline: none;
   }
-  #setupError { color: var(--bad); font-size: 12.5px; min-height: 18px; }
+  #setupScreen input:focus { border-color: var(--purple); }
+  #setupError { color: var(--bad); font-size: 12.5px; min-height: 18px; margin-top: 8px; }
 
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
-  .stat-tile { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
-  .stat-tile .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 6px; }
-  .stat-tile .value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  /* Watchlist Stats Bar */
+  .wl-summary-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; margin-bottom: 14px; gap: 4px; overflow-x: auto;
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md);
+  }
+  .wl-stat-item {
+    display: flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 9px;
+    font-size: 12.5px; font-weight: 500; cursor: pointer; border: 1px solid transparent;
+    transition: all 0.15s ease; white-space: nowrap; user-select: none;
+  }
+  .wl-stat-item:hover { background: var(--card-hover); }
+  .wl-stat-item.active {
+    background: var(--purple-bg); border-color: var(--purple); color: var(--text); font-weight: 600;
+  }
+  .wl-stat-item .count { font-weight: 700; color: var(--text); font-size: 13.5px; }
+  .wl-stat-item .label { color: var(--text-dim); font-size: 11.5px; }
+  .wl-stat-item.active .label { color: var(--purple); }
+  .dot-indicator { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot-indicator.high { background: var(--bad); box-shadow: 0 0 6px rgba(255,77,77,0.5); }
+  .dot-indicator.medium { background: var(--warn); box-shadow: 0 0 6px rgba(255,183,77,0.5); }
+  .dot-indicator.low { background: var(--accent); box-shadow: 0 0 6px rgba(0,230,118,0.5); }
+  .dot-indicator.none-dot { background: var(--text-muted); box-shadow: none; }
+
+  /* Search & Filter Bar */
+  .search-filter-row {
+    display: flex; gap: 10px; margin-bottom: 14px; align-items: center;
+  }
+  .search-input-wrap {
+    flex: 1; position: relative; display: flex; align-items: center;
+  }
+  .search-icon {
+    position: absolute; left: 14px; color: var(--text-muted); pointer-events: none;
+    display: flex; align-items: center;
+  }
+  .search-input-wrap input {
+    width: 100%; padding: 10px 14px 10px 40px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--panel); color: var(--text);
+    font-size: 13.5px; outline: none; transition: border-color 0.15s;
+  }
+  .search-input-wrap input:focus { border-color: var(--purple); }
+  .search-input-wrap input::placeholder { color: var(--text-muted); }
+
+  .filter-selects-group {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .select-btn {
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text-dim); font-size: 13px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px; cursor: pointer; outline: none;
+  }
+  .select-btn select {
+    appearance: none; background: transparent; border: none; color: var(--text-dim);
+    font-size: 13px; font-weight: 500; cursor: pointer; outline: none; padding-right: 4px;
+    font-family: inherit; max-width: 130px; text-overflow: ellipsis;
+  }
+
+  /* Desktop 5-Column Table Grid */
+  .list-table-header {
+    display: grid; grid-template-columns: 2fr 1.5fr 1.3fr 1.5fr 76px;
+    padding: 8px 14px; margin-bottom: 6px; color: var(--text-muted);
+    font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+  }
+  .list-table-header .col-price { text-align: left; }
+  .list-table-header .col-tag { text-align: center; }
+  .list-table-header .col-priority { text-align: center; }
+
+  .stock-list { display: flex; flex-direction: column; gap: 8px; }
+  .stock-item {
+    display: grid; grid-template-columns: 2fr 1.5fr 1.3fr 1.5fr 76px;
+    align-items: center; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; position: relative; overflow: hidden;
+    transition: background 0.15s;
+  }
+  .stock-item:hover { background: var(--card-hover); }
+  
+  .stock-row-top, .stock-row-bottom, .stock-meta-group {
+    display: contents;
+  }
+  
+  .priority-stripe {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  }
+  .priority-stripe.high { background: var(--bad); }
+  .priority-stripe.medium { background: var(--warn); }
+  .priority-stripe.low { background: var(--accent); }
+  .priority-stripe.none { background: transparent; }
+
+  .stock-info { padding-left: 4px; display: flex; flex-direction: column; justify-content: center; }
+  .stock-symbol { font-weight: 700; font-size: 14px; color: var(--text); letter-spacing: 0.02em; line-height: 1.2; }
+  .stock-market { font-size: 11px; color: var(--text-muted); margin-top: 2px; font-weight: 500; }
+
+  .stock-price-col { display: flex; flex-direction: column; justify-content: center; }
+  .stock-price { font-weight: 600; font-size: 13.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .stock-pct { font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stock-pct.pos { color: var(--accent); }
+  .stock-pct.neg { color: var(--bad); }
+  .stock-pct.neutral { color: var(--text-dim); }
+
+  .stock-tag-col { display: flex; align-items: center; justify-content: center; }
+  .stock-tag-badge {
+    padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    background: rgba(124, 92, 252, 0.14); color: #a78bfa; border: 1px solid rgba(124, 92, 252, 0.28);
+    cursor: pointer; transition: all 0.15s ease; white-space: nowrap; max-width: 90px;
+    overflow: hidden; text-overflow: ellipsis; text-align: center;
+  }
+  .stock-tag-badge:hover { background: rgba(124, 92, 252, 0.28); border-color: rgba(124, 92, 252, 0.5); transform: translateY(-1px); }
+  .add-tag-pill {
+    padding: 2.5px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 500;
+    background: rgba(255, 255, 255, 0.04); color: var(--text-muted); border: 1px dashed var(--border-light);
+    cursor: pointer; transition: all 0.15s ease; text-align: center; outline: none;
+  }
+  .add-tag-pill:hover { background: rgba(124, 92, 252, 0.15); color: #a78bfa; border-color: rgba(124, 92, 252, 0.4); }
+
+  .tag-preset-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag-preset-pill {
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 500;
+    background: var(--pill-bg); color: var(--text-dim); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+  }
+  .tag-preset-pill:hover { background: var(--purple-bg); color: var(--purple); border-color: var(--purple-glow); }
+
+  .stock-priority-col { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .priority-badge {
+    padding: 3px 12px; border-radius: 99px; font-size: 11px; font-weight: 600;
+    text-align: center; border: 1px solid transparent; display: inline-block;
+  }
+  .priority-badge.high { background: var(--bad-bg); color: #ff6b6b; border-color: rgba(255,77,77,0.25); }
+  .priority-badge.medium { background: var(--warn-bg); color: #ffd166; border-color: rgba(255,183,77,0.25); }
+  .priority-badge.low { background: var(--good-bg); color: #00e676; border-color: rgba(0,230,118,0.25); }
+  .priority-badge.none { background: var(--pill-bg); color: var(--text-muted); }
+  .stock-added-date { font-size: 10.5px; color: var(--text-muted); margin-top: 3px; }
+
+  .stock-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+  .action-icon-btn {
+    width: 30px; height: 30px; border-radius: 50%; border: none;
+    background: transparent; color: var(--text-dim); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s ease; text-decoration: none;
+  }
+  .action-icon-btn:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .action-icon-btn.add-trade-btn:hover { background: var(--purple-bg); color: var(--purple); }
+
+  /* Fetch Status Banner */
+  .fetch-status-bar {
+    background: var(--purple-bg); border: 1px solid var(--purple-glow); border-radius: 10px;
+    padding: 8px 12px; font-size: 12px; color: var(--purple); font-weight: 500;
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+  }
+
+  /* Load More Footer */
+  .load-more-wrap {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 4px 8px; color: var(--text-dim); font-size: 12.5px;
+  }
+  .btn-load-more {
+    background: transparent; border: none; color: var(--purple);
+    font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;
+    padding: 6px 10px; border-radius: 8px; transition: background 0.15s;
+  }
+  .btn-load-more:hover { background: var(--purple-bg); }
+
+  /* Journal Layout & Cards */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .stat-tile { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; }
+  .stat-tile .label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
+  .stat-tile .value { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .stat-tile .value.pos { color: var(--accent); } .stat-tile .value.neg { color: var(--bad); }
 
-  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-  .tab {
-    padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel);
-    color: var(--text-dim); cursor: pointer; font-size: 12.5px;
+  .filter-tabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px; }
+  .filter-tab {
+    padding: 7px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--panel);
+    color: var(--text-dim); cursor: pointer; font-size: 12.5px; font-weight: 500; white-space: nowrap;
   }
-  .tab.active { color: var(--text); border-color: var(--accent); }
+  .filter-tab.active { color: var(--text); border-color: var(--purple); background: var(--purple-bg); font-weight: 600; }
 
-  #tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 1100px; }
+  /* Table & Desktop View */
+  #tableWrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
   thead th {
-    position: sticky; top: 0; background: var(--panel); text-align: left; padding: 9px 10px;
-    color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap;
+    position: sticky; top: 0; background: var(--panel); text-align: left; padding: 10px 12px;
+    color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.03em;
   }
-  tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  tbody tr:hover { background: var(--pill-bg); cursor: pointer; }
+  tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody tr:hover { background: var(--card-hover); cursor: pointer; }
   .pos { color: var(--accent); } .neg { color: var(--bad); }
-  .dash { color: var(--text-dim); }
-  .pill { padding: 2px 9px; border-radius: 999px; background: var(--pill-bg); font-size: 11.5px; }
-  .pill.open { color: var(--warn); } .pill.closed { color: var(--text-dim); }
-  #emptyStub { padding: 40px; text-align: center; color: var(--text-dim); }
-  a.chart-link { color: var(--accent); text-decoration: none; }
-
-  #modalBackdrop {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
-    align-items: center; justify-content: center; z-index: 50; padding: 20px;
-  }
-  #modalBackdrop.open { display: flex; }
-  #modalCard {
-    background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
-    width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; padding: 20px 22px;
-  }
-  #modalCard h2 { margin: 0 0 14px; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
-  #modalCard .close-x { cursor: pointer; color: var(--text-dim); font-size: 20px; line-height: 1; }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
-  .form-field { display: flex; flex-direction: column; gap: 4px; }
-  .form-field.full { grid-column: 1 / -1; }
-  .form-field label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; }
-  .form-field input, .form-field select, .form-field textarea {
-    padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel); color: var(--text); font-size: 13px; font-family: inherit;
-  }
-  .form-field textarea { resize: vertical; min-height: 44px; }
-  .form-field .hint { font-size: 10.5px; color: var(--text-dim); }
-  .modal-actions { display: flex; justify-content: space-between; margin-top: 16px; }
-  .modal-actions .right { display: flex; gap: 8px; }
+  .dash { color: var(--text-muted); }
+  .pill { padding: 2px 9px; border-radius: 999px; background: var(--pill-bg); font-size: 11.5px; font-weight: 500; }
+  .pill.open { color: var(--warn); background: var(--warn-bg); } .pill.closed { color: var(--text-dim); }
+  #emptyStub { padding: 40px; text-align: center; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+  a.chart-link { color: var(--purple); text-decoration: none; font-weight: 500; }
 
   #cardWrap { display: none; }
   .trade-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 14px; margin-bottom: 10px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s;
   }
+  .trade-card:hover { border-color: var(--border-light); }
   .trade-card .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .trade-card .top-row .sym { font-weight: 700; font-size: 15px; }
-  .trade-card .top-row .pl { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .trade-card .top-row .sym { font-weight: 700; font-size: 15px; color: var(--text); }
+  .trade-card .top-row .pl { font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; }
   .trade-card .meta-row { display: flex; flex-wrap: wrap; gap: 10px 14px; color: var(--text-dim); font-size: 11.5px; margin-bottom: 6px; }
-  .trade-card .meta-row b { color: var(--text); font-weight: 500; }
-  .trade-card .reason { font-size: 12px; color: var(--text-dim); }
+  .trade-card .meta-row b { color: var(--text); font-weight: 600; }
+  .trade-card .reason { font-size: 12px; color: var(--text-dim); border-top: 1px solid var(--border); padding-top: 6px; margin-top: 6px; }
 
-  /* Watchlist page -- stocks synced in from ScanX (a separate app,
-     scanner_state's own Settings tab), read out of a SEPARATE file
-     (scanx_watchlist.json) inside this SAME gist. See loadWatchlist()/
-     renderWatchlistPage() below. */
-  #watchlistPage .wl-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-  #watchlistPage .wl-toolbar .meta { color: var(--text-dim); font-size: 12px; }
-  .wl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-  .wl-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; border-left: 3px solid transparent; }
-  .wl-card.priority-high { border-left-color: var(--bad); }
-  .wl-card.priority-medium { border-left-color: var(--warn); }
-  .wl-card.priority-low { border-left-color: var(--accent); }
-  .wl-card .top-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .wl-card .sym { font-weight: 700; font-size: 14px; }
-  .wl-card .pct { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 12.5px; }
-  .wl-card .meta-row { display: flex; flex-wrap: wrap; gap: 8px 12px; color: var(--text-dim); font-size: 11.5px; margin-bottom: 8px; }
-  .wl-card .meta-row b { color: var(--text); font-weight: 500; }
-  .wl-card .actions { display: flex; gap: 8px; }
-  .wl-card .actions button, .wl-card .actions a, .wl-card .actions select {
-    flex: 1; text-align: center; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border);
-    background: transparent; color: var(--text); cursor: pointer; font-size: 11.5px; text-decoration: none;
-    font-family: inherit;
+  /* Modal Dialog */
+  #modalBackdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; z-index: 100; padding: 16px;
   }
-  .wl-card .actions button:hover, .wl-card .actions a:hover { border-color: var(--accent); color: var(--accent); }
-  .wl-card .actions.wl-edit-row { margin-top: 8px; }
-  .wl-card .actions select { background: var(--panel); }
-  .wl-card .actions button.danger { color: var(--bad); }
-  .wl-card .actions button.danger:hover { border-color: var(--bad); color: var(--bad); }
-  .wl-add-form { display: flex; gap: 6px; flex: 1; min-width: 0; }
-  .wl-add-form input {
-    flex: 1; min-width: 0; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel); color: var(--text); font-size: 12.5px; font-family: inherit;
+  #modalBackdrop.open { display: flex; }
+  #modalCard {
+    background: var(--panel); border: 1px solid var(--border-light); border-radius: var(--radius-lg);
+    width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto; padding: 20px 22px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
   }
-  .wl-add-form select {
-    padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--panel); color: var(--text); font-size: 12.5px; font-family: inherit;
+  #modalCard h2 { margin: 0 0 16px; font-size: 17px; display: flex; justify-content: space-between; align-items: center; }
+  #modalCard .close-x { cursor: pointer; color: var(--text-dim); font-size: 22px; line-height: 1; padding: 4px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-field { display: flex; flex-direction: column; gap: 4px; }
+  .form-field.full { grid-column: 1 / -1; }
+  .form-field label { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+  .form-field input, .form-field select, .form-field textarea {
+    padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; outline: none;
   }
+  .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--purple); }
+  .form-field textarea { resize: vertical; min-height: 50px; }
+  .form-field .hint { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  .modal-actions { display: flex; justify-content: space-between; margin-top: 20px; }
+  .modal-actions .right { display: flex; gap: 10px; }
 
-  @media (max-width: 700px) {
-    header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; }
-    header .brand { flex: 1 0 100%; text-align: center; }
-    header .spacer { display: none; }
-    #gistIndicator { flex: 1 0 100%; text-align: center; }
-    .page-nav { flex: 1 0 100%; }
-    .page-nav button { flex: 1; text-align: center; padding: 8px 12px; }
-    .header-actions { flex: 1 0 100%; }
-    .header-actions button { flex: 1; padding: 9px 14px; }
-    main { padding: 12px; }
-    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  button.tool {
+    padding: 8px 16px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card); color: var(--text); cursor: pointer; font-size: 13px; font-weight: 500;
+  }
+  button.tool:hover { border-color: var(--purple); }
+  button.tool.primary { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 600; }
+  button.tool.danger { color: var(--bad); border-color: rgba(255,77,77,0.3); }
+
+  /* Action Popover Menu */
+  .popover-backdrop {
+    position: fixed; inset: 0; z-index: 90; display: none;
+  }
+  .popover-backdrop.open { display: block; }
+  .action-menu {
+    position: absolute; background: var(--card); border: 1px solid var(--border-light);
+    border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 95;
+    min-width: 190px; padding: 6px; display: none;
+  }
+  .action-menu.open { display: block; }
+  .action-menu-item {
+    padding: 9px 12px; font-size: 12.5px; color: var(--text); cursor: pointer;
+    border-radius: 8px; display: flex; align-items: center; gap: 8px; font-weight: 500;
+  }
+  .action-menu-item:hover { background: var(--purple-bg); color: var(--purple); }
+  .action-menu-item.danger { color: var(--bad); }
+  .action-menu-item.danger:hover { background: var(--bad-bg); }
+
+  /* Bottom Navigation Bar for Mobile */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+    background: #090c10; border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-around;
+    z-index: 50; padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; color: var(--text-muted); text-decoration: none; font-size: 11px; font-weight: 500;
+    flex: 1; height: 100%; cursor: pointer; position: relative;
+  }
+  .nav-item.active { color: var(--purple); font-weight: 600; }
+  .nav-item .active-dot {
+    width: 4px; height: 4px; background: var(--purple); border-radius: 50%;
+    position: absolute; bottom: 4px; display: none;
+  }
+  .nav-item.active .active-dot { display: block; }
+  .nav-item svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  @media (max-width: 650px) {
     #tableWrap { display: none; }
     #cardWrap { display: block; }
-    .form-grid { grid-template-columns: 1fr; }
-    #setupScreen { margin: 30px auto; padding: 0 16px; }
-    /* iOS Safari auto-zooms on focus into any input under 16px -- keep
-       these at 16px on mobile specifically (13px elsewhere looks better
-       and doesn't trigger it on desktop/Android). */
-    #setupScreen input, .form-field input, .form-field select, .form-field textarea {
-      font-size: 16px;
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    
+    /* Table header single line row */
+    .list-table-header {
+      display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+      padding: 6px 8px; font-size: 10px; gap: 4px;
     }
-    #watchlistPage .wl-toolbar { flex-wrap: wrap; }
-    .wl-add-form { flex: 1 0 100%; }
-    .wl-grid { grid-template-columns: 1fr; }
-    .wl-card .actions button, .wl-card .actions a, .wl-card .actions select { padding: 8px 10px; }
-    .wl-add-form input, .wl-add-form select { font-size: 16px; }
+
+    /* Search & Filter row on a SINGLE LINE */
+    .search-filter-row {
+      display: flex; flex-direction: row; gap: 6px; margin-bottom: 12px; align-items: center; width: 100%;
+    }
+    .search-input-wrap { flex: 1; min-width: 0; }
+    .search-input-wrap input { padding: 8px 10px 8px 28px; font-size: 11.5px; }
+    .search-icon { left: 8px; }
+    .search-icon svg { width: 13px; height: 13px; }
+    
+    .filter-selects-group { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+    .select-btn { padding: 7px 6px; gap: 2px; border-radius: 8px; }
+    .select-btn select { font-size: 10.5px; max-width: 72px; text-overflow: ellipsis; padding-right: 2px; }
+    .select-btn svg { width: 9px; height: 9px; }
+
+    /* Summary bar smooth horizontal scroll */
+    .wl-summary-bar {
+      display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px;
+      scrollbar-width: none; -ms-overflow-style: none;
+    }
+    .wl-summary-bar::-webkit-scrollbar { display: none; }
+    .wl-stat-item { flex-shrink: 0; padding: 5px 8px; font-size: 11px; }
+
+    /* Single Line Stock Item Row (Zero Overlap, Truncates Gracefully) */
+    .stock-item {
+      display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+      align-items: center; gap: 4px; padding: 10px 8px 10px 10px; border-radius: 10px;
+    }
+
+    .stock-row-top, .stock-row-bottom, .stock-meta-group {
+      display: contents;
+    }
+
+    .stock-info { min-width: 0; overflow: hidden; padding-left: 2px; }
+    .stock-symbol { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .stock-market { font-size: 9.5px; }
+
+    .stock-price-col { min-width: 0; overflow: hidden; text-align: left; }
+    .stock-price { font-size: 12px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+    .stock-pct { font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+
+    .stock-tag-col { min-width: 0; overflow: hidden; justify-content: center; }
+    .stock-tag-badge { padding: 2px 5px; font-size: 9.5px; max-width: 55px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .add-tag-pill { padding: 2px 5px; font-size: 9.5px; }
+
+    .stock-priority-col { min-width: 0; overflow: hidden; align-items: center; }
+    .priority-badge { padding: 2px 6px; font-size: 9.5px; max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .stock-added-date { font-size: 9px; margin-top: 1px; }
+
+    .stock-actions { gap: 2px; }
+    .action-icon-btn { width: 25px; height: 25px; }
+    .action-icon-btn svg { width: 14px; height: 14px; }
+
+    #app { padding-bottom: 80px; }
   }
 </style>
 </head>
@@ -180,32 +472,64 @@
 
 <div id="setupScreen">
   <h1>Trading Journal</h1>
-  <p>Entries are stored in a private GitHub Gist, under your own account -- nothing is sent anywhere else.</p>
+  <p>Entries are stored in a private GitHub Gist under your account -- nothing is sent anywhere else.</p>
   <ol>
     <li>Go to <b>github.com/settings/tokens</b> &rarr; <b>Tokens (classic)</b> &rarr; Generate new token (classic).</li>
     <li>Check only the <b>gist</b> scope.</li>
     <li>Generate, copy the token, and paste it below. It's saved only in this browser's local storage.</li>
   </ol>
   <input type="password" id="tokenInput" placeholder="ghp_...">
-  <button class="tool primary" id="connectBtn" style="width:100%;">Connect</button>
+  <button class="tool primary" id="connectBtn" style="width:100%; padding:12px;">Connect Account</button>
   <div id="setupError"></div>
 </div>
 
 <div id="app" style="display:none;">
   <header>
-    <span class="brand">📓 Trading Journal</span>
-    <span id="gistIndicator" style="color:var(--text-dim); font-size:11px;" title="The gist ID your entries are stored in -- should be IDENTICAL across every device you connect from. If two devices show different IDs here, they're not synced."></span>
-    <div class="spacer"></div>
-    <div class="page-nav" id="pageNav"></div>
-    <div class="header-actions">
-      <button class="tool primary" id="addTradeBtn">+ Add Trade</button>
-      <button class="tool danger" id="disconnectBtn">Disconnect</button>
+    <div class="header-top">
+      <div class="brand-group">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">Trading Journal</div>
+          <div class="brand-subtitle">Track. Learn. Grow.</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="searchTriggerBtn" title="Search">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
+        <button class="icon-btn" id="filterTriggerBtn" title="Filter">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"></line><line x1="8" y1="12" x2="16" y2="12"></line><line x1="11" y1="18" x2="13" y2="18"></line></svg>
+        </button>
+        <button class="icon-btn" id="moreOptionsBtn" title="Account / Settings">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Segmented Header Navigation Bar -->
+    <div class="segmented-bar">
+      <div class="segmented-control" id="headerNavPills">
+        <button class="segment-btn" id="pillBtnJournal" data-target="journal">Journal (<span id="journalCountBadge">0</span>)</button>
+        <button class="segment-btn active" id="pillBtnWatchlist" data-target="watchlist">Watchlist (<span id="watchlistCountBadge">0</span>)</button>
+      </div>
+      <button class="btn-add-primary" id="addTradeBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        <span id="addBtnText">Add Symbol</span>
+      </button>
     </div>
   </header>
+
   <main>
-    <div id="journalPage">
+    <!-- Journal Page View -->
+    <div id="journalPage" style="display:none;">
       <div class="stat-grid" id="statGrid"></div>
-      <div class="tabs" id="tabs"></div>
+      <div class="filter-tabs" id="tabs"></div>
       <div id="tableWrap">
         <table>
           <thead><tr id="headRow"></tr></thead>
@@ -214,27 +538,66 @@
       </div>
       <div id="cardWrap"></div>
     </div>
-    <div id="watchlistPage" style="display:none;"></div>
+
+    <!-- Watchlist Page View -->
+    <div id="watchlistPage">
+      <!-- Content filled dynamically -->
+    </div>
+
+    <!-- Stats Page View -->
+    <div id="statsPage" style="display:none;">
+      <div id="fullStatsContainer"></div>
+    </div>
   </main>
+
+  <!-- Bottom Navigation Bar for Mobile (Non-redundant tabs: Home & Stats) -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" data-nav="home">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      <span>Dashboard</span>
+      <div class="active-dot"></div>
+    </div>
+    <div class="nav-item" data-nav="stats">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+      <span>Performance</span>
+      <div class="active-dot"></div>
+    </div>
+  </nav>
 </div>
 
+<!-- Modal Backdrop -->
 <div id="modalBackdrop">
   <div id="modalCard"></div>
 </div>
+
+<!-- Action Menu Popover -->
+<div class="popover-backdrop" id="popoverBackdrop"></div>
+<div class="action-menu" id="actionMenu"></div>
 
 <script>
 const GIST_FILENAME = "trades.json";
 const GIST_DESCRIPTION = "Trading journal data (private)";
 const TOKEN_KEY = "journal_gh_token";
 const GIST_ID_KEY = "journal_gist_id";
-// ScanX (a separate local app, github.com/.../ScanX) syncs its own
-// Watchlist tab into THIS SAME gist (found by the identical
-// GIST_DESCRIPTION above, from its own Settings tab), writing to this
-// SEPARATE file -- never touches GIST_FILENAME/trades.json. See
-// loadWatchlist() below.
 const WATCHLIST_GIST_FILENAME = "scanx_watchlist.json";
+const CACHED_PRICES_KEY = "journal_cached_stock_prices";
 
-let state = { trades: [], tab: "all", editingId: null, page: "journal", watchlist: [], watchlistAsOf: null, watchlistAdding: false };
+let state = {
+  trades: [],
+  tab: "all",
+  editingId: null,
+  page: "watchlist",
+  watchlist: [],
+  watchlistAsOf: null,
+  watchlistAdding: false,
+  searchQuery: "",
+  sortBy: "priority", // priority, added_at, name, pct, price
+  priorityFilter: "all", // "all", "high", "medium", "low", "none"
+  tagFilter: "all", // "all", "untagged", or specific tag name
+  limit: 12,
+  fetchingPrices: false,
+  fetchStatusText: ""
+};
 
 function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function getGistId() { return localStorage.getItem(GIST_ID_KEY); }
@@ -246,24 +609,249 @@ function ghHeaders() {
   };
 }
 
+// Load cached prices from LocalStorage
+function loadCachedPrices() {
+  try {
+    const raw = localStorage.getItem(CACHED_PRICES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCachedPrices(priceMap) {
+  try {
+    localStorage.setItem(CACHED_PRICES_KEY, JSON.stringify(priceMap));
+  } catch (e) {}
+}
+
+function applyCachedPricesToWatchlist() {
+  const cache = loadCachedPrices();
+  if (!cache || !Object.keys(cache).length) return;
+  state.watchlist.forEach(stock => {
+    if (cache[stock.symbol]) {
+      if (stock.ltp === null || stock.ltp === undefined) stock.ltp = cache[stock.symbol].ltp;
+      if (stock.pct_change === null || stock.pct_change === undefined) stock.pct_change = cache[stock.symbol].pct_change;
+    }
+  });
+}
+
+const PRICE_ALIASES = {
+  "ADANIESOL": ["ADANIENSOL", "ADANIESOL"],
+  "ADANIENSOL": ["ADANIENSOL", "ADANIESOL"],
+  "TATAMOTORS": ["TMPV", "TATAMTRDVR", "TATAMOTORS"],
+  "TMPV": ["TMPV", "TATAMOTORS"],
+  "LTIM": ["LTIM", "LTI", "LTIMINDTREE"],
+  "LTIMINDTREE": ["LTIMINDTREE", "LTIM"],
+  "M&M": ["M_M", "M&M", "MM"],
+  "BAJAJ-AUTO": ["BAJAJ_AUTO", "BAJAJ-AUTO"]
+};
+
+function normalizeStockSymbol(raw) {
+  if (!raw) return "";
+  let s = raw.trim().toUpperCase();
+  s = s.replace(/^(NSE:|BSE:|NASDAQ:|NYSE:)/, "");
+  s = s.replace(/(\.NS|\.BO)$/, "");
+  return s;
+}
+
+// Blazing fast batch stock price fetcher using CORS-friendly scanner APIs with Yahoo fallback
+async function fetchBatchPricesFromAPI(stocks) {
+  const result = {};
+  if (!stocks || !stocks.length) return result;
+
+  const tickers = [];
+  const names = [];
+
+  stocks.forEach(s => {
+    const norm = normalizeStockSymbol(s.symbol);
+    const aliases = PRICE_ALIASES[norm] || [norm];
+    aliases.forEach(a => {
+      names.push(a);
+      const cleanTv = a.replace(/&/g, "_").replace(/-/g, "_");
+      if (s.market === "US") {
+        tickers.push(`NASDAQ:${cleanTv}`, `NYSE:${cleanTv}`, `AMEX:${cleanTv}`);
+      } else {
+        tickers.push(`NSE:${cleanTv}`, `BSE:${cleanTv}`);
+      }
+    });
+  });
+
+  const postJson = async (url, data) => {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      if (res.ok) return await res.json();
+    } catch(e) {}
+    return null;
+  };
+
+  const [tResGlobal, tResIndia, nResGlobal, nResIndia] = await Promise.all([
+    postJson("https://scanner.tradingview.com/global/scan", { symbols: { tickers }, columns: ["close", "change"] }),
+    postJson("https://scanner.tradingview.com/india/scan", { symbols: { tickers }, columns: ["close", "change"] }),
+    postJson("https://scanner.tradingview.com/global/scan", { filter: [{ left: "name", operation: "in_range", right: names }], columns: ["name", "close", "change"] }),
+    postJson("https://scanner.tradingview.com/india/scan", { filter: [{ left: "name", operation: "in_range", right: names }], columns: ["name", "close", "change"] })
+  ]);
+
+  function record(symName, ltp, pct, ticker = "") {
+    if (ltp === null || ltp === undefined) return;
+    const cleanFound = symName.toUpperCase().replace(/_/g, "&");
+    for (const s of stocks) {
+      const targetNorm = normalizeStockSymbol(s.symbol);
+      const rawTarget = s.symbol.trim().toUpperCase();
+      const aliases = (PRICE_ALIASES[targetNorm] || [targetNorm]).map(x => x.replace(/_/g, "&"));
+      if (aliases.includes(cleanFound) || cleanFound === targetNorm || cleanFound === rawTarget) {
+        const isPref = ticker.startsWith("NSE:") || ticker.startsWith("NASDAQ:") || ticker.startsWith("NYSE:");
+        if (!result[rawTarget] || isPref) {
+          result[rawTarget] = { ltp: Number(ltp), pct_change: Number(pct || 0) };
+        }
+      }
+    }
+  }
+
+  [tResGlobal, tResIndia].forEach(res => {
+    if (res?.data) {
+      res.data.forEach(row => {
+        const parts = row.s.split(":");
+        record(parts[1], row.d[0], row.d[1], row.s);
+      });
+    }
+  });
+
+  [nResGlobal, nResIndia].forEach(res => {
+    if (res?.data) {
+      res.data.forEach(row => {
+        record(row.d[0], row.d[1], row.d[2], row.s);
+      });
+    }
+  });
+
+  return result;
+}
+
+// Fast stock price fetcher matching exact Yahoo Finance symbol format (.NS, .BO, plain)
+async function fetchYahooPrice(symbol, market = "IN") {
+  const symRaw = symbol.trim().toUpperCase();
+  const norm = normalizeStockSymbol(symRaw);
+  
+  const batchRes = await fetchBatchPricesFromAPI([{ symbol: symRaw, market }]);
+  if (batchRes[symRaw]) return batchRes[symRaw];
+
+  // Direct Yahoo Finance ticker candidates
+  const variants = PRICE_ALIASES[norm] || [norm];
+  const yahooTickers = [];
+  variants.forEach(v => {
+    if (market === "US") {
+      yahooTickers.push(v);
+    } else {
+      yahooTickers.push(`${v}.NS`, `${v}.BO`, v);
+    }
+  });
+
+  for (const ticker of yahooTickers) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 2000);
+      const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`, { signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (meta && (meta.regularMarketPrice !== undefined || meta.chartPreviousClose !== undefined)) {
+        const ltp = meta.regularMarketPrice ?? meta.chartPreviousClose;
+        const prevClose = meta.chartPreviousClose || meta.previousClose || ltp;
+        const pct_change = meta.regularMarketChangePercent !== undefined && meta.regularMarketChangePercent !== null
+          ? meta.regularMarketChangePercent
+          : (prevClose ? ((ltp - prevClose) / prevClose) * 100 : 0);
+        return { ltp: Number(ltp), pct_change: Number(pct_change) };
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+// Ultra-fast parallel price fetcher with Cache-First policy
+async function fetchAllYahooPrices(force = false) {
+  if (state.fetchingPrices) return;
+
+  const activeStocks = state.watchlist.filter(r => !r.removed);
+  const cache = loadCachedPrices();
+  const now = Date.now();
+  const FOUR_HOURS = 4 * 3600 * 1000;
+
+  const stocksToFetch = force ? activeStocks : activeStocks.filter(s => {
+    const cached = cache[s.symbol];
+    if (!cached || cached.ltp === null || cached.ltp === undefined) return true;
+    const age = cached.updated_at ? (now - new Date(cached.updated_at).getTime()) : Infinity;
+    return age > FOUR_HOURS;
+  });
+
+  if (!stocksToFetch.length) return;
+
+  state.fetchingPrices = true;
+  state.fetchStatusText = `⚡ Updating prices for ${stocksToFetch.length} stocks...`;
+  renderWatchlistPage();
+
+  let updated = 0;
+  
+  // 1. Primary ultra-fast batch fetch
+  const batchResults = await fetchBatchPricesFromAPI(stocksToFetch);
+  
+  stocksToFetch.forEach(stock => {
+    const sym = stock.symbol.trim().toUpperCase();
+    if (batchResults[sym]) {
+      stock.ltp = batchResults[sym].ltp;
+      stock.pct_change = batchResults[sym].pct_change;
+      stock.updated_at = new Date().toISOString();
+      cache[sym] = { ltp: stock.ltp, pct_change: stock.pct_change, updated_at: stock.updated_at };
+      updated++;
+    }
+  });
+
+  // 2. Fallback for any stock not returned in batch
+  const missingStocks = stocksToFetch.filter(s => !batchResults[s.symbol.trim().toUpperCase()]);
+  if (missingStocks.length) {
+    await Promise.all(missingStocks.map(async (stock) => {
+      const res = await fetchYahooPrice(stock.symbol, stock.market || "IN");
+      if (res && res.ltp !== null) {
+        stock.ltp = res.ltp;
+        stock.pct_change = res.pct_change;
+        stock.updated_at = new Date().toISOString();
+        cache[stock.symbol] = { ltp: res.ltp, pct_change: res.pct_change, updated_at: stock.updated_at };
+        updated++;
+      }
+    }));
+  }
+
+  saveCachedPrices(cache);
+  state.fetchingPrices = false;
+  state.fetchStatusText = `⚡ Prices updated for ${updated} of ${stocksToFetch.length} stocks!`;
+
+  if (getToken()) {
+    saveWatchlist().catch(() => {});
+  }
+
+  setTimeout(() => {
+    state.fetchStatusText = "";
+    renderWatchlistPage();
+  }, 2000);
+
+  render();
+}
+
 async function ensureGist() {
   const existing = getGistId();
   if (existing) return existing;
 
-  // The gist ID is only cached in THIS browser's local storage -- the
-  // first device to ever connect creates the gist, but every device
-  // after that must find and reuse the SAME one, or it silently starts
-  // its own separate, empty journal (exactly what happened connecting
-  // from a second device before this fix). Search the account's own
-  // gists for one matching this app's own fixed description before ever
-  // creating a new one.
   const listRes = await fetch("https://api.github.com/gists?per_page=100", { headers: ghHeaders() });
   if (!listRes.ok) {
-    // Don't silently fall through to creating ANOTHER new gist just
-    // because this check failed -- a bad/wrong-scoped token (e.g. a
-    // fine-grained token, which doesn't support gists at all) would
-    // otherwise keep masking itself behind a fresh empty gist every
-    // time, looking like "it's not syncing" instead of the real error.
     throw new Error(
       `Couldn't list your gists (HTTP ${listRes.status}) -- make sure this is a CLASSIC token `
       + `(github.com/settings/tokens, not the fine-grained kind) with the 'gist' scope checked.`
@@ -310,11 +898,6 @@ async function saveTrades() {
   if (!res.ok) throw new Error(`Couldn't save gist: HTTP ${res.status}`);
 }
 
-// A SEPARATE fetch from loadTrades() above (not merged into one gist call)
-// so a ScanX-sync problem can never block trades from loading, and vice
-// versa -- each page degrades independently. gist.files simply won't
-// have this key at all until ScanX has synced at least once -- that's a
-// normal, expected state (not an error), left as an empty array.
 async function loadWatchlist() {
   const gistId = await ensureGist();
   const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: ghHeaders() });
@@ -323,23 +906,9 @@ async function loadWatchlist() {
   const file = data.files[WATCHLIST_GIST_FILENAME];
   state.watchlist = file ? JSON.parse(file.content || "[]") : [];
   state.watchlistAsOf = new Date().toISOString();
+  applyCachedPricesToWatchlist();
 }
 
-// Both apps can now write scanx_watchlist.json (ScanX still owns the
-// enriched fields -- price/industry/conviction/setup -- it recomputes
-// those from its own live data on its next sync regardless of what this
-// side writes). To avoid one side's push silently clobbering the other's
-// concurrent edit: entries carry updated_at, bumped on every edit from
-// EITHER side; ScanX's own pull-merge (scanx/server/app.py) only accepts
-// a remote entry when its updated_at is newer than what ScanX already
-// has, so an edit made here always survives until ScanX has actually
-// seen it. A removal is written as a `removed: true` tombstone rather
-// than deleted outright -- deleting it here would mean ScanX (which
-// still has the symbol in its own watchlist) never learns it was
-// removed, and would just re-add it on its next push. Once ScanX's own
-// pull-merge applies the removal, its next push regenerates the file
-// from its own watchlist (which no longer has the symbol) -- the
-// tombstone disappears on its own, nothing here needs to clean it up.
 async function saveWatchlist() {
   const gistId = await ensureGist();
   const res = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -350,11 +919,6 @@ async function saveWatchlist() {
   if (!res.ok) throw new Error(`Couldn't save gist: HTTP ${res.status}`);
 }
 
-// Mirrors scanx/server/app.py's own _tv_link() -- kept in sync by hand,
-// same disclosed reasoning as that function's own docstring (the one
-// place a frontend-only helper needed a server-side twin, now also
-// needed here since a journal-added symbol has no ScanX-computed link
-// until ScanX's next sync).
 function tvLink(symbol, market) {
   const tvSymbol = symbol.replace(/&/g, "_");
   const prefix = market === "US" ? "" : "NSE:";
@@ -377,6 +941,22 @@ async function setWatchlistPriority(symbol, priority) {
   }
 }
 
+async function setWatchlistTag(symbol, tag) {
+  const entry = state.watchlist.find((r) => r.symbol === symbol);
+  if (!entry) return;
+  const prev = entry.tag;
+  entry.tag = tag ? tag.trim() : null;
+  entry.updated_at = new Date().toISOString();
+  try {
+    if (getToken()) await saveWatchlist();
+    render();
+  } catch (e) {
+    entry.tag = prev;
+    alert("Couldn't save tag: " + e.message);
+    render();
+  }
+}
+
 async function removeFromWatchlist(symbol) {
   if (!confirm(`Remove ${symbol} from the watchlist?`)) return;
   const entry = state.watchlist.find((r) => r.symbol === symbol);
@@ -393,24 +973,41 @@ async function removeFromWatchlist(symbol) {
   }
 }
 
-async function addToWatchlist(symbolRaw, market) {
+async function addToWatchlist(symbolRaw, market = "IN", tag = "") {
   const symbol = symbolRaw.trim().toUpperCase();
   if (!symbol) return;
   const existing = state.watchlist.find((r) => r.symbol === symbol);
   if (existing && !existing.removed) { alert(`${symbol} is already on the watchlist.`); return; }
   const now = new Date().toISOString();
+  
+  let newStock;
   if (existing) {
-    // Was a tombstoned removal ScanX hasn't pulled yet -- resurrect it
-    // rather than push a duplicate entry for the same symbol.
     delete existing.removed;
+    if (tag) existing.tag = tag.trim();
     existing.updated_at = now;
+    newStock = existing;
   } else {
-    state.watchlist.push({
-      symbol, market, ltp: null, pct_change: null, industry: null, conviction: null, setup: null,
+    newStock = {
+      symbol, market, tag: tag ? tag.trim() : null, ltp: null, pct_change: null, industry: null, conviction: null, setup: null,
       priority: null, added_at: now, updated_at: now, tv_link: tvLink(symbol, market),
-    });
+    };
+    state.watchlist.push(newStock);
   }
-  await saveWatchlist();
+  
+  render();
+  if (getToken()) await saveWatchlist();
+
+  // Instantly fetch price for newly added stock
+  fetchYahooPrice(symbol, market).then(data => {
+    if (data && data.ltp !== null) {
+      newStock.ltp = data.ltp;
+      newStock.pct_change = data.pct_change;
+      const cache = loadCachedPrices();
+      cache[symbol] = { ltp: data.ltp, pct_change: data.pct_change, updated_at: new Date().toISOString() };
+      saveCachedPrices(cache);
+      render();
+    }
+  });
 }
 
 function fmt(n, digits = 2) {
@@ -418,14 +1015,15 @@ function fmt(n, digits = 2) {
   return Number(n).toFixed(digits);
 }
 
+function fmtCurrency(n) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function dash(html) {
   return html === null || html === undefined || html === "" ? '<span class="dash">&mdash;</span>' : html;
 }
 
-// ---- Auto-calc: Entry is the anchor. Fill Entry+Stoploss -> Risk% fills.
-// Fill Entry+Risk% -> Stoploss fills. Direction (Long/Short) decides which
-// side of Entry the stoploss sits on for the Risk%->Stoploss direction;
-// the Stoploss->Risk% direction is direction-agnostic (absolute distance).
 function riskPctFromStoploss(entry, stoploss) {
   if (!entry || stoploss === null || stoploss === undefined || stoploss === "") return null;
   return Math.abs(entry - stoploss) / entry * 100;
@@ -439,10 +1037,6 @@ function plPct(entry, exitedAt, direction) {
   if (!entry || exitedAt === null || exitedAt === undefined || exitedAt === "") return null;
   return direction === "Short" ? (entry - exitedAt) / entry * 100 : (exitedAt - entry) / entry * 100;
 }
-// Exited @ accepts EITHER a literal price (e.g. "647.45") OR a percentage
-// move from Entry (e.g. "5%" or "-3%") -- a trailing "%" switches it to the
-// percentage path, calculated relative to Entry and Direction so a "5%"
-// gain resolves to the correct side of Entry for a Short trade too.
 function resolveExitPrice(raw, entry, direction) {
   const trimmed = (raw || "").trim();
   if (trimmed === "") return null;
@@ -484,19 +1078,34 @@ function renderStats() {
     tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, s.avgRR >= 0 ? "pos" : "neg"),
     tile("Avg P/L", s.avgPl !== null ? (s.avgPl > 0 ? "+" : "") + fmt(s.avgPl, 2) + "%" : null, s.avgPl >= 0 ? "pos" : "neg"),
   ].join("");
+
+  document.getElementById("fullStatsContainer").innerHTML = `
+    <h2 style="font-size:18px; margin-bottom:16px;">Performance Overview</h2>
+    <div class="stat-grid" style="grid-template-columns: repeat(2, 1fr);">
+      ${[
+        tile("Total Trades", state.trades.length),
+        tile("Open Trades", s.open),
+        tile("Closed Trades", s.closed),
+        tile("Breakeven Trades", s.breakeven),
+        tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, s.winRate >= 50 ? "pos" : "neg"),
+        tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, s.avgRR >= 0 ? "pos" : "neg"),
+        tile("Avg P/L %", s.avgPl !== null ? (s.avgPl > 0 ? "+" : "") + fmt(s.avgPl, 2) + "%" : null, s.avgPl >= 0 ? "pos" : "neg"),
+      ].join("")}
+    </div>
+  `;
 }
 
 const TABS = [
-  { key: "all", label: "All" },
+  { key: "all", label: "All Trades" },
   { key: "Open", label: "Open" },
   { key: "Closed", label: "Closed" },
 ];
 
 function renderTabs() {
   document.getElementById("tabs").innerHTML = TABS.map(
-    (t) => `<div class="tab ${state.tab === t.key ? "active" : ""}" data-tab="${t.key}">${t.label}</div>`
+    (t) => `<div class="filter-tab ${state.tab === t.key ? "active" : ""}" data-tab="${t.key}">${t.label}</div>`
   ).join("");
-  document.querySelectorAll(".tab").forEach((el) =>
+  document.querySelectorAll(".filter-tab").forEach((el) =>
     el.addEventListener("click", () => { state.tab = el.dataset.tab; render(); })
   );
 }
@@ -522,7 +1131,7 @@ function renderRows() {
 
   if (!rows.length) {
     document.getElementById("tbody").innerHTML =
-      `<tr><td colspan="${COLUMNS.length}"><div id="emptyStub">No trades yet -- click "+ Add Trade" to log one.</div></td></tr>`;
+      `<tr><td colspan="${COLUMNS.length}"><div id="emptyStub">No trades found in this view.</div></td></tr>`;
     return;
   }
 
@@ -552,19 +1161,13 @@ function renderRows() {
   );
 }
 
-// Narrow-screen equivalent of renderRows() -- same underlying trades,
-// same click-to-edit behavior, just laid out as stacked cards instead of
-// a 14-column table nobody can read on a phone without scrolling
-// sideways. Toggled via the @media(max-width:700px) rule in <style>,
-// not a JS resize listener -- both #tableWrap/#cardWrap always render,
-// CSS just shows one.
 function renderCards() {
   let rows = state.trades.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   if (state.tab !== "all") rows = rows.filter((t) => t.status === state.tab);
 
   const cardWrap = document.getElementById("cardWrap");
   if (!rows.length) {
-    cardWrap.innerHTML = `<div id="emptyStub">No trades yet -- click "+ Add Trade" to log one.</div>`;
+    cardWrap.innerHTML = `<div id="emptyStub">No trades logged yet -- tap "+ Add" to log one.</div>`;
     return;
   }
 
@@ -599,191 +1202,501 @@ function renderCards() {
   );
 }
 
-const PAGES = [
-  { key: "journal", label: "Journal" },
-  { key: "watchlist", label: "Watchlist" },
-];
+function updateNavigationState() {
+  document.getElementById("journalCountBadge").textContent = state.trades.length;
+  const activeWl = state.watchlist.filter((r) => !r.removed);
+  document.getElementById("watchlistCountBadge").textContent = activeWl.length;
 
-function renderPageNav() {
-  document.getElementById("pageNav").innerHTML = PAGES.map(
-    (p) => `<button class="${state.page === p.key ? "active" : ""}" data-page="${p.key}">${p.label}</button>`
-  ).join("");
-  document.querySelectorAll("#pageNav button").forEach((el) =>
-    el.addEventListener("click", () => { state.page = el.dataset.page; render(); })
-  );
+  document.querySelectorAll(".segment-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.target === state.page);
+  });
+
+  document.querySelectorAll(".nav-item").forEach((item) => {
+    item.classList.toggle("active", item.dataset.nav === state.page || (item.dataset.nav === 'home' && state.page === 'watchlist'));
+  });
+
   document.getElementById("journalPage").style.display = state.page === "journal" ? "" : "none";
   document.getElementById("watchlistPage").style.display = state.page === "watchlist" ? "" : "none";
-  // "+ Add Trade" only makes sense on the Journal page -- the Watchlist
-  // page has its own per-card "Log Trade" action instead (see
-  // renderWatchlistPage() below), which pre-fills the symbol.
-  document.getElementById("addTradeBtn").style.display = state.page === "journal" ? "" : "none";
+  document.getElementById("statsPage").style.display = state.page === "stats" ? "" : "none";
+
+  // Update Top Right Add button text dynamically based on current page
+  const addBtnText = document.getElementById("addBtnText");
+  if (addBtnText) {
+    addBtnText.textContent = state.page === "watchlist" ? "Add Symbol" : "Add Trade";
+  }
 }
 
-// Pre-fills the Add Trade modal's Symbol (and Date, to today) from a
-// Watchlist card's own "Log Trade" button -- the actual cross-app
-// workflow this whole sync exists for: browse picks ScanX already
-// flagged, one click to start journaling a real trade for one of them,
-// instead of retyping the symbol by hand.
 function logTradeFromWatchlist(symbol) {
   state.page = "journal";
-  renderPageNav();
+  updateNavigationState();
   openModal(null);
   document.getElementById("f_symbol").value = symbol;
   document.getElementById("f_date").value = new Date().toISOString().slice(0, 10);
 }
 
-function addSymbolFormHtml() {
-  if (!state.watchlistAdding) return `<button class="tool" id="showAddWatchlistBtn">+ Add Symbol</button>`;
-  return `
-    <span class="wl-add-form">
-      <input id="addWatchlistSymbol" placeholder="Symbol, e.g. TCS" autocapitalize="characters">
-      <select id="addWatchlistMarket"><option value="IN">IN</option><option value="US">US</option></select>
-      <button class="tool primary" id="confirmAddWatchlistBtn">Add</button>
-      <button class="tool" id="cancelAddWatchlistBtn">Cancel</button>
-    </span>`;
-}
+function openAddSymbolModal() {
+  document.getElementById("modalCard").innerHTML = `
+    <h2>Add Symbol to Watchlist <span class="close-x" id="modalCloseX">&times;</span></h2>
+    <div class="form-grid">
+      <div class="form-field full">
+        <label>Stock Symbol</label>
+        <input type="text" id="f_wlSymbol" placeholder="e.g. AMBUJACEM or TATAMOTORS" autocapitalize="characters" style="text-transform:uppercase;">
+      </div>
+      <div class="form-field full">
+        <label>Market / Exchange</label>
+        <select id="f_wlMarket">
+          <option value="IN" selected>NSE / BSE (India)</option>
+          <option value="US">US Market (NASDAQ / NYSE)</option>
+        </select>
+      </div>
+      <div class="form-field full">
+        <label>Tag (Optional)</label>
+        <input type="text" id="f_wlTag" placeholder="e.g. Breakout, Swing, Core, F&O">
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px;">
+      <div></div>
+      <div class="right">
+        <button class="tool" id="cancelAddWlBtn">Cancel</button>
+        <button class="tool primary" id="saveAddWlBtn">Add Stock</button>
+      </div>
+    </div>
+  `;
 
-function wireAddSymbolForm() {
-  if (!state.watchlistAdding) {
-    document.getElementById("showAddWatchlistBtn").addEventListener("click", () => {
-      state.watchlistAdding = true;
-      renderWatchlistPage();
-      document.getElementById("addWatchlistSymbol")?.focus();
-    });
-    return;
-  }
-  document.getElementById("cancelAddWatchlistBtn").addEventListener("click", () => {
-    state.watchlistAdding = false;
-    renderWatchlistPage();
-  });
+  document.getElementById("modalCloseX").addEventListener("click", closeModal);
+  document.getElementById("cancelAddWlBtn").addEventListener("click", closeModal);
+  
   const submit = async () => {
-    const symbolEl = document.getElementById("addWatchlistSymbol");
-    const marketEl = document.getElementById("addWatchlistMarket");
-    const symbol = symbolEl.value;
-    if (!symbol.trim()) { symbolEl.focus(); return; }
-    const btn = document.getElementById("confirmAddWatchlistBtn");
-    btn.disabled = true; btn.textContent = "Adding...";
+    const sym = document.getElementById("f_wlSymbol").value.trim();
+    const market = document.getElementById("f_wlMarket").value;
+    const tag = document.getElementById("f_wlTag").value.trim();
+    if (!sym) return;
+    const saveBtn = document.getElementById("saveAddWlBtn");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Adding...";
     try {
-      await addToWatchlist(symbol, marketEl.value);
-      state.watchlistAdding = false;
+      await addToWatchlist(sym, market, tag);
+      closeModal();
       render();
     } catch (e) {
-      alert("Couldn't add: " + e.message);
-      btn.disabled = false; btn.textContent = "Add";
+      alert("Error adding symbol: " + e.message);
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Add Stock";
     }
   };
-  document.getElementById("confirmAddWatchlistBtn").addEventListener("click", submit);
-  document.getElementById("addWatchlistSymbol").addEventListener("keydown", (e) => {
+
+  document.getElementById("saveAddWlBtn").addEventListener("click", submit);
+  document.getElementById("f_wlSymbol").addEventListener("keydown", (e) => {
     if (e.key === "Enter") submit();
   });
+  document.getElementById("f_wlTag").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submit();
+  });
+
+  document.getElementById("modalBackdrop").classList.add("open");
+  setTimeout(() => document.getElementById("f_wlSymbol")?.focus(), 100);
+}
+
+function openEditTagModal(symbol) {
+  const entry = state.watchlist.find((r) => r.symbol === symbol);
+  const currentTag = entry ? (entry.tag || "") : "";
+
+  document.getElementById("modalCard").innerHTML = `
+    <h2>Set Tag for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
+    <div class="form-grid">
+      <div class="form-field full">
+        <label>Tag Name</label>
+        <input type="text" id="f_tagInput" placeholder="e.g. Breakout, Swing, Long Term" value="${currentTag}">
+      </div>
+      <div class="form-field full">
+        <label style="margin-bottom:4px;">Quick Suggestions</label>
+        <div class="tag-preset-pills">
+          <span class="tag-preset-pill" data-preset="Breakout">Breakout</span>
+          <span class="tag-preset-pill" data-preset="Swing">Swing</span>
+          <span class="tag-preset-pill" data-preset="Long Term">Long Term</span>
+          <span class="tag-preset-pill" data-preset="F&O">F&O</span>
+          <span class="tag-preset-pill" data-preset="Value">Value</span>
+          <span class="tag-preset-pill" data-preset="Momentum">Momentum</span>
+          <span class="tag-preset-pill" data-preset="Core">Core</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="tool danger" id="removeTagBtn" style="${currentTag ? '' : 'display:none;'}">Remove Tag</button>
+      <div class="right">
+        <button class="tool" id="cancelTagBtn">Cancel</button>
+        <button class="tool primary" id="saveTagBtn">Save Tag</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("modalCloseX").addEventListener("click", closeModal);
+  document.getElementById("cancelTagBtn").addEventListener("click", closeModal);
+
+  const tagInput = document.getElementById("f_tagInput");
+  document.querySelectorAll(".tag-preset-pill").forEach(pill => {
+    pill.addEventListener("click", () => {
+      tagInput.value = pill.dataset.preset;
+    });
+  });
+
+  document.getElementById("saveTagBtn").addEventListener("click", async () => {
+    const val = tagInput.value.trim();
+    await setWatchlistTag(symbol, val);
+    closeModal();
+  });
+
+  const removeBtn = document.getElementById("removeTagBtn");
+  if (removeBtn) {
+    removeBtn.addEventListener("click", async () => {
+      await setWatchlistTag(symbol, null);
+      closeModal();
+    });
+  }
+
+  tagInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      setWatchlistTag(symbol, tagInput.value.trim());
+      closeModal();
+    }
+  });
+
+  document.getElementById("modalBackdrop").classList.add("open");
+  setTimeout(() => tagInput?.focus(), 100);
+}
+
+function formatAddedDate(added_at) {
+  if (!added_at) return "";
+  const d = new Date(added_at);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 function renderWatchlistPage() {
   const view = document.getElementById("watchlistPage");
-  // removed:true entries are tombstones for ScanX's own pull-merge (see
-  // removeFromWatchlist()'s comment) -- never shown here.
-  const rows = state.watchlist.filter((r) => !r.removed);
-  const asOfText = state.watchlistAsOf ? `Loaded ${new Date(state.watchlistAsOf).toLocaleTimeString()}` : "";
+  const activeRows = state.watchlist.filter((r) => !r.removed);
 
-  if (!rows.length) {
-    view.innerHTML = `
-      <div class="wl-toolbar">
-        <button class="tool" id="refreshWatchlistBtn">&#8635; Refresh</button>
-        ${addSymbolFormHtml()}
-        <span class="meta">${asOfText}</span>
-      </div>
-      <div id="emptyStub">
-        No watchlist synced from ScanX yet.<br><br>
-        In ScanX &rarr; Settings &rarr; Trading Journal Sync, paste a GitHub token (the SAME kind this
-        journal's own setup screen asked for -- 'gist' scope) and click "Sync Now", or star a stock --
-        it syncs automatically from then on. Or add a symbol here yourself with "+ Add Symbol" above.
-      </div>`;
-    document.getElementById("refreshWatchlistBtn").addEventListener("click", refreshWatchlist);
-    wireAddSymbolForm();
-    return;
+  const highCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'high').length;
+  const medCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'medium').length;
+  const lowCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'low').length;
+  const noneCount = activeRows.filter(r => !r.priority || (r.priority || '').toLowerCase() === 'none' || r.priority.trim() === '').length;
+
+  // Dynamically extract all unique created tags across all active stocks
+  const uniqueTags = Array.from(new Set(activeRows.map(r => (r.tag || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+
+  // Filter by priority
+  let filtered = activeRows;
+  if (state.priorityFilter && state.priorityFilter !== 'all') {
+    if (state.priorityFilter === 'none') {
+      filtered = filtered.filter(r => !r.priority || (r.priority || '').toLowerCase() === 'none' || r.priority.trim() === '');
+    } else {
+      filtered = filtered.filter(r => (r.priority || '').toLowerCase() === state.priorityFilter);
+    }
   }
 
-  // Sorted High -> Medium -> Low -> untagged priority, most-recently-added
-  // first within each tier -- same intent as ScanX's own Watchlist tab
-  // default sort (Priority, then Added date), so this reads consistently
-  // with the app it was synced FROM.
+  // Filter by Tag
+  if (state.tagFilter && state.tagFilter !== 'all') {
+    if (state.tagFilter === 'untagged') {
+      filtered = filtered.filter(r => !r.tag || !r.tag.trim());
+    } else {
+      filtered = filtered.filter(r => (r.tag || '').trim().toLowerCase() === state.tagFilter.toLowerCase());
+    }
+  }
+
+  // Filter by search query (symbol, industry, or tag)
+  if (state.searchQuery.trim()) {
+    const q = state.searchQuery.toLowerCase().trim();
+    filtered = filtered.filter(r => (r.symbol || '').toLowerCase().includes(q) || (r.industry || '').toLowerCase().includes(q) || (r.tag || '').toLowerCase().includes(q));
+  }
+
+  // Sort logic including Date Added (added_at)
   const priorityRank = { high: 3, medium: 2, low: 1 };
-  const sorted = rows.slice().sort((a, b) => {
-    const pr = (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
+  filtered.sort((a, b) => {
+    if (state.sortBy === "added_at") return (b.added_at || "").localeCompare(a.added_at || "");
+    if (state.sortBy === "name") return (a.symbol || "").localeCompare(b.symbol || "");
+    if (state.sortBy === "pct") return (b.pct_change || 0) - (a.pct_change || 0);
+    if (state.sortBy === "price") return (b.ltp || 0) - (a.ltp || 0);
+    // default: priority then date
+    const pr = (priorityRank[(b.priority || '').toLowerCase()] || 0) - (priorityRank[(a.priority || '').toLowerCase()] || 0);
     if (pr !== 0) return pr;
     return (b.added_at || "").localeCompare(a.added_at || "");
   });
 
-  view.innerHTML = `
-    <div class="wl-toolbar">
-      <button class="tool" id="refreshWatchlistBtn">&#8635; Refresh</button>
-      ${addSymbolFormHtml()}
-      <span class="meta">${rows.length} stock${rows.length === 1 ? "" : "s"} &middot; ${asOfText}</span>
-    </div>
-    <div class="wl-grid">
-      ${sorted.map((r) => {
-        const pctCls = (r.pct_change || 0) > 0 ? "pos" : (r.pct_change || 0) < 0 ? "neg" : "";
-        const pctText = r.pct_change !== null && r.pct_change !== undefined
-          ? (r.pct_change > 0 ? "+" : "") + fmt(r.pct_change) + "%" : "—";
-        const addedText = r.added_at ? new Date(r.added_at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—";
-        return `<div class="wl-card priority-${r.priority || ""}">
-          <div class="top-row">
-            <span class="sym">${r.symbol}</span>
-            <span class="pct ${pctCls}">${pctText}</span>
-          </div>
-          <div class="meta-row">
-            <span>${dash(r.market)}</span>
-            <span>${dash(r.industry)}</span>
-          </div>
-          <div class="meta-row">
-            <span>Price <b>${dash(fmt(r.ltp))}</b></span>
-            <span>Conv <b>${dash(r.conviction !== null && r.conviction !== undefined ? Math.round(r.conviction) : null)}</b></span>
-            <span>Added <b>${addedText}</b></span>
-          </div>
-          <div class="meta-row"><span class="pill">${dash(r.setup)}</span></div>
-          <div class="actions">
-            <button data-log-symbol="${r.symbol}">+ Log Trade</button>
-            ${r.tv_link ? `<a href="${r.tv_link}" target="_blank" rel="noopener">Chart &#8599;</a>` : ""}
-          </div>
-          <div class="actions wl-edit-row">
-            <select data-priority-symbol="${r.symbol}">
-              <option value="" ${!r.priority ? "selected" : ""}>No priority</option>
-              <option value="high" ${r.priority === "high" ? "selected" : ""}>High</option>
-              <option value="medium" ${r.priority === "medium" ? "selected" : ""}>Medium</option>
-              <option value="low" ${r.priority === "low" ? "selected" : ""}>Low</option>
-            </select>
-            <button class="danger" data-remove-symbol="${r.symbol}">Remove</button>
-          </div>
-        </div>`;
-      }).join("")}
-    </div>`;
+  const visibleRows = filtered.slice(0, state.limit);
 
-  document.getElementById("refreshWatchlistBtn").addEventListener("click", refreshWatchlist);
-  wireAddSymbolForm();
+  view.innerHTML = `
+    ${state.fetchStatusText ? `<div class="fetch-status-bar"><span>${state.fetchStatusText}</span></div>` : ''}
+
+    <!-- Interactive Summary Stats Bar (Click to filter) -->
+    <div class="wl-summary-bar">
+      <div class="wl-stat-item ${state.priorityFilter === 'all' ? 'active' : ''}" data-prio-filter="all">
+        <span class="count">${activeRows.length}</span>
+        <span class="label">Stocks</span>
+      </div>
+      <div class="wl-stat-item ${state.priorityFilter === 'high' ? 'active' : ''}" data-prio-filter="high">
+        <span class="dot-indicator high"></span>
+        <span class="count">${highCount}</span>
+        <span class="label">High</span>
+      </div>
+      <div class="wl-stat-item ${state.priorityFilter === 'medium' ? 'active' : ''}" data-prio-filter="medium">
+        <span class="dot-indicator medium"></span>
+        <span class="count">${medCount}</span>
+        <span class="label">Medium</span>
+      </div>
+      <div class="wl-stat-item ${state.priorityFilter === 'low' ? 'active' : ''}" data-prio-filter="low">
+        <span class="dot-indicator low"></span>
+        <span class="count">${lowCount}</span>
+        <span class="label">Low</span>
+      </div>
+      <div class="wl-stat-item ${state.priorityFilter === 'none' ? 'active' : ''}" data-prio-filter="none">
+        <span class="dot-indicator none-dot"></span>
+        <span class="count">${noneCount}</span>
+        <span class="label">None</span>
+      </div>
+    </div>
+
+    <!-- Search, Dynamic Tag Filter, and Sort Controls -->
+    <div class="search-filter-row">
+      <div class="search-input-wrap">
+        <span class="search-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </span>
+        <input type="text" id="wlSearchInput" placeholder="Search symbols, tags..." value="${state.searchQuery}">
+      </div>
+
+      <div class="filter-selects-group">
+        <!-- Dynamic Tag Filter Dropdown Button -->
+        <div class="select-btn">
+          <select id="wlTagFilterSelect">
+            <option value="all" ${state.tagFilter === 'all' ? 'selected' : ''}>Tag: All Tags</option>
+            <option value="untagged" ${state.tagFilter === 'untagged' ? 'selected' : ''}>Tag: Untagged</option>
+            ${uniqueTags.map(t => `<option value="${t}" ${state.tagFilter === t ? 'selected' : ''}>Tag: ${t}</option>`).join('')}
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+
+        <!-- Main Sort Dropdown -->
+        <div class="select-btn">
+          <select id="wlSortSelect">
+            <option value="priority" ${state.sortBy === 'priority' ? 'selected' : ''}>Sort: Priority</option>
+            <option value="added_at" ${state.sortBy === 'added_at' ? 'selected' : ''}>Sort: Date Added</option>
+            <option value="name" ${state.sortBy === 'name' ? 'selected' : ''}>Sort: Name</option>
+            <option value="pct" ${state.sortBy === 'pct' ? 'selected' : ''}>Sort: % Change</option>
+            <option value="price" ${state.sortBy === 'price' ? 'selected' : ''}>Sort: Price</option>
+          </select>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Header Bar (Clickable for Sorting) -->
+    <div class="list-table-header">
+      <div class="sort-header-col" data-sort-header="name" style="cursor:pointer;" title="Sort by Symbol">Symbol ${state.sortBy === 'name' ? '▲' : ''}</div>
+      <div class="col-price sort-header-col" data-sort-header="price" style="cursor:pointer;" title="Sort by Price">Price<br>% Change ${state.sortBy === 'price' ? '▼' : state.sortBy === 'pct' ? '▼' : ''}</div>
+      <div class="col-tag sort-header-col" data-sort-header="tag" style="cursor:pointer;" title="Sort by Tag">Tag ${state.sortBy === 'tag' ? '▲' : ''}</div>
+      <div class="col-priority sort-header-col" data-sort-header="priority" style="cursor:pointer;" title="Sort by Priority">Priority<br>Added ${state.sortBy === 'priority' ? '▼' : state.sortBy === 'added_at' ? '▼' : ''}</div>
+      <div></div>
+    </div>
+
+    <!-- Stock Rows List -->
+    <div class="stock-list">
+      ${visibleRows.length ? visibleRows.map((r) => {
+        const prio = (r.priority || '').toLowerCase();
+        const pct = r.pct_change;
+        const pctCls = pct > 0 ? "pos" : pct < 0 ? "neg" : "neutral";
+        const pctText = pct !== null && pct !== undefined ? (pct > 0 ? "+" : "") + fmt(pct) + "%" : "—";
+        const prioLabel = prio && prio !== 'none' ? prio.charAt(0).toUpperCase() + prio.slice(1) : "None";
+        const addedDate = formatAddedDate(r.added_at);
+        const market = r.market || "NSE";
+        const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
+
+        return `
+          <div class="stock-item" data-symbol="${r.symbol}">
+            <div class="priority-stripe ${prio || 'none'}"></div>
+            
+            <div class="stock-row-top">
+              <div class="stock-info">
+                <span class="stock-symbol">${r.symbol}</span>
+                <span class="stock-market">${market}</span>
+              </div>
+              <div class="stock-price-col">
+                <span class="stock-price">${fmtCurrency(r.ltp)}</span>
+                <span class="stock-pct ${pctCls}">${pctText}</span>
+              </div>
+            </div>
+
+            <div class="stock-row-bottom">
+              <div class="stock-meta-group">
+                <div class="stock-tag-col">
+                  ${tagHtml}
+                </div>
+                <div class="stock-priority-col">
+                  <span class="priority-badge ${prio || 'none'}">${prioLabel}</span>
+                  ${addedDate ? `<span class="stock-added-date">${addedDate}</span>` : ''}
+                </div>
+              </div>
+              <div class="stock-actions">
+                ${r.tv_link ? `
+                  <a href="${r.tv_link}" target="_blank" rel="noopener" class="action-icon-btn" title="View Chart">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+                  </a>
+                ` : ''}
+                <button class="action-icon-btn add-trade-btn" data-log-symbol="${r.symbol}" title="Log Trade">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                </button>
+                <button class="action-icon-btn item-menu-btn" data-menu-symbol="${r.symbol}" title="Options">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('') : `<div id="emptyStub">No matching stocks found in this view.</div>`}
+    </div>
+
+    <!-- Load More Footer -->
+    <div class="load-more-wrap">
+      <span>Showing ${Math.min(visibleRows.length, filtered.length)} of ${filtered.length} stocks</span>
+      ${visibleRows.length < filtered.length ? `
+        <button class="btn-load-more" id="loadMoreBtn">
+          Load more
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+      ` : ''}
+    </div>
+  `;
+
+  // Attach priority filter listeners
+  document.querySelectorAll("[data-prio-filter]").forEach((el) => {
+    el.addEventListener("click", () => {
+      state.priorityFilter = el.dataset.prioFilter;
+      state.limit = 12;
+      renderWatchlistPage();
+    });
+  });
+
+  // Attach search input listener
+  const searchInput = document.getElementById("wlSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      renderWatchlistPage();
+    });
+  }
+
+  // Attach sort header click listeners
+  document.querySelectorAll("[data-sort-header]").forEach((el) => {
+    el.addEventListener("click", () => {
+      state.sortBy = el.dataset.sortHeader;
+      renderWatchlistPage();
+    });
+  });
+
+  // Attach tag filter dropdown listener
+  const tagFilterSelect = document.getElementById("wlTagFilterSelect");
+  if (tagFilterSelect) {
+    tagFilterSelect.addEventListener("change", (e) => {
+      state.tagFilter = e.target.value;
+      state.limit = 12;
+      renderWatchlistPage();
+    });
+  }
+
+  // Attach sort dropdown listener
+  const sortSelect = document.getElementById("wlSortSelect");
+  if (sortSelect) {
+    sortSelect.addEventListener("change", (e) => {
+      state.sortBy = e.target.value;
+      renderWatchlistPage();
+    });
+  }
+
+  // Attach load more listener
+  const loadMoreBtn = document.getElementById("loadMoreBtn");
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", () => {
+      state.limit += 12;
+      renderWatchlistPage();
+    });
+  }
+
+  // Action listeners
   document.querySelectorAll("[data-log-symbol]").forEach((el) =>
-    el.addEventListener("click", () => logTradeFromWatchlist(el.dataset.logSymbol))
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      logTradeFromWatchlist(el.dataset.logSymbol);
+    })
   );
-  document.querySelectorAll("[data-priority-symbol]").forEach((el) =>
-    el.addEventListener("change", () => setWatchlistPriority(el.dataset.prioritySymbol, el.value))
+
+  document.querySelectorAll("[data-edit-tag]").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openEditTagModal(el.dataset.editTag);
+    })
   );
-  document.querySelectorAll("[data-remove-symbol]").forEach((el) =>
-    el.addEventListener("click", () => removeFromWatchlist(el.dataset.removeSymbol))
+
+  document.querySelectorAll(".item-menu-btn").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openItemMenu(e, el.dataset.menuSymbol);
+    })
   );
 }
 
-async function refreshWatchlist() {
-  const btn = document.getElementById("refreshWatchlistBtn");
-  if (btn) { btn.disabled = true; btn.textContent = "Refreshing..."; }
-  try {
-    await loadWatchlist();
-  } catch (e) {
-    console.warn("Watchlist refresh failed", e);
-  }
-  render();
+function openItemMenu(event, symbol) {
+  const backdrop = document.getElementById("popoverBackdrop");
+  const menu = document.getElementById("actionMenu");
+  const rect = event.currentTarget.getBoundingClientRect();
+
+  menu.innerHTML = `
+    <div style="font-weight:700; padding:6px 12px 8px; font-size:12px; color:var(--text-dim); border-bottom:1px solid var(--border); margin-bottom:4px;">
+      ${symbol} Options
+    </div>
+    <div class="action-menu-item" id="editTagMenuItemBtn">🏷️ Edit / Assign Tag</div>
+    <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
+    <div style="font-weight:700; padding:4px 12px; font-size:11px; color:var(--text-muted);">Priority</div>
+    <div class="action-menu-item" data-set-prio="high">🔴 High Priority</div>
+    <div class="action-menu-item" data-set-prio="medium">🟡 Medium Priority</div>
+    <div class="action-menu-item" data-set-prio="low">🟢 Low Priority</div>
+    <div class="action-menu-item" data-set-prio="">⚪ No Priority</div>
+    <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
+    <div class="action-menu-item danger" id="removeStockItemBtn">🗑️ Remove Symbol</div>
+  `;
+
+  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  menu.style.right = `${window.innerWidth - rect.right}px`;
+  menu.style.left = 'auto';
+
+  backdrop.classList.add("open");
+  menu.classList.add("open");
+
+  const close = () => {
+    backdrop.classList.remove("open");
+    menu.classList.remove("open");
+  };
+
+  backdrop.onclick = close;
+
+  document.getElementById("editTagMenuItemBtn").addEventListener("click", () => {
+    close();
+    openEditTagModal(symbol);
+  });
+
+  menu.querySelectorAll("[data-set-prio]").forEach(el => {
+    el.addEventListener("click", () => {
+      close();
+      setWatchlistPriority(symbol, el.dataset.setPrio);
+    });
+  });
+
+  document.getElementById("removeStockItemBtn").addEventListener("click", () => {
+    close();
+    removeFromWatchlist(symbol);
+  });
 }
 
 function render() {
-  renderPageNav();
+  updateNavigationState();
   renderStats();
   renderTabs();
   renderHead();
@@ -792,7 +1705,7 @@ function render() {
   renderWatchlistPage();
 }
 
-// ---- Add/Edit modal ----
+/* Add / Edit Trade Modal */
 function closeModal() {
   document.getElementById("modalBackdrop").classList.remove("open");
   state.editingId = null;
@@ -820,23 +1733,23 @@ function openModal(id) {
           <option value="Closed" ${t.status === "Closed" ? "selected" : ""}>Closed</option>
         </select>
       </div>
-      <div class="form-field"><label>Entry</label><input type="number" step="any" id="f_entry" value="${t.entry ?? ""}"></div>
+      <div class="form-field"><label>Entry Price</label><input type="number" step="any" id="f_entry" value="${t.entry ?? ""}"></div>
       <div class="form-field"></div>
       <div class="form-field">
-        <label>Stoploss</label><input type="number" step="any" id="f_stoploss" value="${t.stoploss ?? ""}">
-        <span class="hint">Fill this OR Risk % -- the other auto-fills</span>
+        <label>Stoploss Price</label><input type="number" step="any" id="f_stoploss" value="${t.stoploss ?? ""}">
+        <span class="hint">Fill this OR Risk % -- auto-fills</span>
       </div>
       <div class="form-field">
         <label>Risk %</label><input type="number" step="any" id="f_riskPct" value="${t.riskPct ?? ""}">
-        <span class="hint">Fill this OR Stoploss -- the other auto-fills</span>
+        <span class="hint">Fill this OR Stoploss -- auto-fills</span>
       </div>
       <div class="form-field full"><label>Reason for Trading</label>
         <textarea id="f_reasonForTrading">${t.reasonForTrading || ""}</textarea>
       </div>
       <div class="form-field"><label>Exit Date</label><input type="date" id="f_exitDate" value="${t.exitDate || ""}"></div>
       <div class="form-field">
-        <label>Exited @</label><input type="text" id="f_exitedAt" value="${t.exitedAt ?? ""}" placeholder="e.g. 647.45 or 5%">
-        <span class="hint">Type a price, or a % move from Entry (e.g. "5%" or "-3%") -- it'll be converted automatically</span>
+        <label>Exited @</label><input type="text" id="f_exitedAt" value="${t.exitedAt ?? ""}" placeholder="Price or e.g. 5%">
+        <span class="hint">Price or % move from entry</span>
       </div>
       <div class="form-field full"><label>Reason of Booking</label>
         <input type="text" id="f_reasonOfBooking" value="${t.reasonOfBooking || ""}" placeholder="Target hit / Stopped out / Manual exit">
@@ -848,7 +1761,7 @@ function openModal(id) {
       <div>${isEdit ? `<button class="tool danger" id="deleteBtn">Delete</button>` : ""}</div>
       <div class="right">
         <button class="tool" id="cancelBtn">Cancel</button>
-        <button class="tool primary" id="saveBtn">Save</button>
+        <button class="tool primary" id="saveBtn">Save Trade</button>
       </div>
     </div>
   `;
@@ -858,9 +1771,6 @@ function openModal(id) {
   const riskEl = document.getElementById("f_riskPct");
   const directionEl = document.getElementById("f_direction");
 
-  // Whichever of Stoploss/Risk% was typed into most recently drives the
-  // other -- tracked via a "last touched" flag rather than firing both
-  // ways at once (which would fight itself on every keystroke).
   let lastTouched = null;
   stoplossEl.addEventListener("input", () => { lastTouched = "stoploss"; recalc(); });
   riskEl.addEventListener("input", () => { lastTouched = "risk"; recalc(); });
@@ -931,7 +1841,7 @@ async function saveTrade(id) {
   } catch (e) {
     alert("Couldn't save: " + e.message);
     saveBtn.disabled = false;
-    saveBtn.textContent = "Save";
+    saveBtn.textContent = "Save Trade";
   }
 }
 
@@ -947,18 +1857,85 @@ async function deleteTrade(id) {
   }
 }
 
-document.getElementById("addTradeBtn").addEventListener("click", () => openModal(null));
-document.getElementById("disconnectBtn").addEventListener("click", () => {
-  if (!confirm("Disconnect? This only clears the token AND cached gist ID from THIS browser -- your data stays safe in the gist.")) return;
-  // Also clear the cached gist ID, not just the token -- a device that
-  // connected before the multi-device fix (or ever hit a wrong gist for
-  // any other reason) would otherwise keep reusing that same cached ID
-  // forever, since ensureGist() returns early the moment ANY ID is
-  // cached, never re-running the find-by-description lookup.
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(GIST_ID_KEY);
-  location.reload();
+// Navigation Events
+document.querySelectorAll(".segment-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    state.page = btn.dataset.target;
+    render();
+  });
 });
+
+document.querySelectorAll(".nav-item").forEach(item => {
+  item.addEventListener("click", () => {
+    const nav = item.dataset.nav;
+    if (nav === "home") state.page = "watchlist";
+    else state.page = nav;
+    render();
+  });
+});
+
+// Top Right + Add Button: Tab-sensitive action!
+document.getElementById("addTradeBtn").addEventListener("click", () => {
+  if (state.page === "watchlist") {
+    openAddSymbolModal();
+  } else {
+    openModal(null);
+  }
+});
+
+document.getElementById("moreOptionsBtn").addEventListener("click", (e) => {
+  openItemMenu(e, null);
+  const menu = document.getElementById("actionMenu");
+  const gistId = getGistId() ? getGistId().slice(0, 8) : "None";
+  menu.innerHTML = `
+    <div style="font-weight:700; padding:6px 12px 8px; font-size:12px; color:var(--text-dim); border-bottom:1px solid var(--border); margin-bottom:4px;">
+      Account Sync (gist: ${gistId})
+    </div>
+    <div class="action-menu-item" id="menuFetchYahooBtn">⚡ Force Refresh All Prices</div>
+    <div class="action-menu-item" id="menuAddSymbolBtn">➕ Add Symbol to Watchlist</div>
+    <div class="action-menu-item" id="menuRefreshBtn">🔄 Refresh Watchlist</div>
+    <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
+    <div class="action-menu-item danger" id="menuDisconnectBtn">🚪 Disconnect Token</div>
+  `;
+
+  document.getElementById("menuFetchYahooBtn").addEventListener("click", () => {
+    document.getElementById("popoverBackdrop").classList.remove("open");
+    menu.classList.remove("open");
+    fetchAllYahooPrices(true);
+  });
+
+  document.getElementById("menuAddSymbolBtn").addEventListener("click", () => {
+    document.getElementById("popoverBackdrop").classList.remove("open");
+    menu.classList.remove("open");
+    openAddSymbolModal();
+  });
+
+  document.getElementById("menuRefreshBtn").addEventListener("click", () => {
+    document.getElementById("popoverBackdrop").classList.remove("open");
+    menu.classList.remove("open");
+    loadWatchlist().then(render);
+  });
+
+  document.getElementById("menuDisconnectBtn").addEventListener("click", () => {
+    document.getElementById("popoverBackdrop").classList.remove("open");
+    menu.classList.remove("open");
+    if (confirm("Disconnect GitHub token?")) {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(GIST_ID_KEY);
+      location.reload();
+    }
+  });
+});
+
+document.getElementById("searchTriggerBtn").addEventListener("click", () => {
+  state.page = "watchlist";
+  render();
+  setTimeout(() => {
+    const el = document.getElementById("wlSearchInput");
+    if (el) el.focus();
+  }, 50);
+});
+
 document.getElementById("modalBackdrop").addEventListener("click", (e) => {
   if (e.target.id === "modalBackdrop") closeModal();
 });
@@ -982,13 +1959,12 @@ async function boot() {
   await loadTrades();
   document.getElementById("setupScreen").style.display = "none";
   document.getElementById("app").style.display = "";
-  document.getElementById("gistIndicator").textContent = `gist: ${getGistId().slice(0, 8)}`;
   render();
-  // NOT awaited, deliberately -- a slow/failed watchlist read (a separate
-  // concern from the journal's own trades) should never delay the app's
-  // real boot. Re-renders once it resolves so the Watchlist page fills
-  // in a moment after first paint instead of blocking it.
-  loadWatchlist().then(render).catch((e) => console.warn("Watchlist load failed", e));
+  loadWatchlist().then(() => {
+    render();
+    // Cache-First: fetch prices only for missing/stale stocks (force = false)
+    fetchAllYahooPrices(false);
+  }).catch((e) => console.warn("Watchlist load failed", e));
 }
 
 if (getToken()) {
