@@ -591,7 +591,7 @@ let state = {
   watchlistAsOf: null,
   watchlistAdding: false,
   searchQuery: "",
-  sortBy: "priority", // priority, added_at, name, pct, price
+  sortBy: "added_at", // added_at, priority, name, pct, price
   priorityFilter: "all", // "all", "high", "medium", "low", "none"
   tagFilter: "all", // "all", "untagged", or specific tag name
   limit: 12,
@@ -1489,8 +1489,8 @@ function renderWatchlistPage() {
         <!-- Main Sort Dropdown -->
         <div class="select-btn">
           <select id="wlSortSelect">
-            <option value="priority" ${state.sortBy === 'priority' ? 'selected' : ''}>Sort: Priority</option>
             <option value="added_at" ${state.sortBy === 'added_at' ? 'selected' : ''}>Sort: Date Added</option>
+            <option value="priority" ${state.sortBy === 'priority' ? 'selected' : ''}>Sort: Priority</option>
             <option value="name" ${state.sortBy === 'name' ? 'selected' : ''}>Sort: Name</option>
             <option value="pct" ${state.sortBy === 'pct' ? 'selected' : ''}>Sort: % Change</option>
             <option value="price" ${state.sortBy === 'price' ? 'selected' : ''}>Sort: Price</option>
