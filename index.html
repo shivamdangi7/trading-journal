@@ -145,6 +145,31 @@
   .dot-indicator.low { background: var(--accent); box-shadow: 0 0 6px rgba(0,230,118,0.5); }
   .dot-indicator.none-dot { background: var(--text-muted); box-shadow: none; }
 
+  /* Market Filter Segment Tabs (IN / US / All) */
+  .market-tabs-row {
+    display: flex; gap: 8px; margin-bottom: 12px; align-items: center;
+    overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .market-tabs-row::-webkit-scrollbar { display: none; }
+
+  .market-tab {
+    padding: 6px 14px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+    color: var(--text-dim); background: var(--card-bg); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s ease; user-select: none;
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  }
+  .market-tab:hover {
+    color: var(--text); border-color: rgba(255, 255, 255, 0.2); background: var(--card-hover);
+  }
+  .market-tab.active {
+    color: #fff; background: var(--purple); border-color: var(--purple);
+    box-shadow: 0 2px 10px rgba(124, 92, 252, 0.35);
+  }
+  .market-tab-badge {
+    padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 700;
+    background: rgba(255, 255, 255, 0.15); color: currentColor;
+  }
+
   /* Search & Filter Bar */
   .search-filter-row {
     display: flex; gap: 10px; margin-bottom: 14px; align-items: center;
@@ -593,6 +618,7 @@ let state = {
   searchQuery: "",
   sortBy: "added_at", // added_at, priority, name, pct, price, tag
   sortDir: "desc", // asc, desc
+  marketFilter: "all", // "all", "IN", "US"
   priorityFilter: "all", // "all", "high", "medium", "low", "none"
   tagFilter: "all", // "all", "untagged", or specific tag name
   limit: 12,
@@ -1383,16 +1409,27 @@ function renderWatchlistPage() {
   const view = document.getElementById("watchlistPage");
   const activeRows = state.watchlist.filter((r) => !r.removed);
 
-  const highCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'high').length;
-  const medCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'medium').length;
-  const lowCount = activeRows.filter(r => (r.priority || '').toLowerCase() === 'low').length;
-  const noneCount = activeRows.filter(r => !r.priority || (r.priority || '').toLowerCase() === 'none' || r.priority.trim() === '').length;
+  const inRows = activeRows.filter(r => !r.market || r.market === 'IN' || r.market === 'NSE');
+  const usRows = activeRows.filter(r => r.market === 'US');
 
-  // Dynamically extract all unique created tags across all active stocks
-  const uniqueTags = Array.from(new Set(activeRows.map(r => (r.tag || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  // Apply market filter
+  let marketRows = activeRows;
+  if (state.marketFilter === 'IN') {
+    marketRows = inRows;
+  } else if (state.marketFilter === 'US') {
+    marketRows = usRows;
+  }
+
+  const highCount = marketRows.filter(r => (r.priority || '').toLowerCase() === 'high').length;
+  const medCount = marketRows.filter(r => (r.priority || '').toLowerCase() === 'medium').length;
+  const lowCount = marketRows.filter(r => (r.priority || '').toLowerCase() === 'low').length;
+  const noneCount = marketRows.filter(r => !r.priority || (r.priority || '').toLowerCase() === 'none' || r.priority.trim() === '').length;
+
+  // Dynamically extract all unique created tags across active market stocks
+  const uniqueTags = Array.from(new Set(marketRows.map(r => (r.tag || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
   // Filter by priority
-  let filtered = activeRows;
+  let filtered = marketRows;
   if (state.priorityFilter && state.priorityFilter !== 'all') {
     if (state.priorityFilter === 'none') {
       filtered = filtered.filter(r => !r.priority || (r.priority || '').toLowerCase() === 'none' || r.priority.trim() === '');
@@ -1458,10 +1495,23 @@ function renderWatchlistPage() {
   view.innerHTML = `
     ${state.fetchStatusText ? `<div class="fetch-status-bar"><span>${state.fetchStatusText}</span></div>` : ''}
 
+    <!-- Market Filter Segment Tabs (IN / US / All) -->
+    <div class="market-tabs-row">
+      <div class="market-tab ${state.marketFilter === 'all' ? 'active' : ''}" data-market-filter="all">
+        <span>🌐 All Markets</span> <span class="market-tab-badge">${activeRows.length}</span>
+      </div>
+      <div class="market-tab ${state.marketFilter === 'IN' ? 'active' : ''}" data-market-filter="IN">
+        <span>🇮🇳 India (NSE)</span> <span class="market-tab-badge">${inRows.length}</span>
+      </div>
+      <div class="market-tab ${state.marketFilter === 'US' ? 'active' : ''}" data-market-filter="US">
+        <span>🇺🇸 US Market</span> <span class="market-tab-badge">${usRows.length}</span>
+      </div>
+    </div>
+
     <!-- Interactive Summary Stats Bar (Click to filter) -->
     <div class="wl-summary-bar">
       <div class="wl-stat-item ${state.priorityFilter === 'all' ? 'active' : ''}" data-prio-filter="all">
-        <span class="count">${activeRows.length}</span>
+        <span class="count">${marketRows.length}</span>
         <span class="label">Stocks</span>
       </div>
       <div class="wl-stat-item ${state.priorityFilter === 'high' ? 'active' : ''}" data-prio-filter="high">
@@ -1595,6 +1645,15 @@ function renderWatchlistPage() {
       ` : ''}
     </div>
   `;
+
+  // Attach market tab filter listeners
+  document.querySelectorAll("[data-market-filter]").forEach((el) => {
+    el.addEventListener("click", () => {
+      state.marketFilter = el.dataset.marketFilter;
+      state.limit = 12;
+      renderWatchlistPage();
+    });
+  });
 
   // Attach priority filter listeners
   document.querySelectorAll("[data-prio-filter]").forEach((el) => {
