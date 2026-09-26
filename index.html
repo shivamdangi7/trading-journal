@@ -138,6 +138,29 @@
       color: var(--text);
     }
 
+    .market-switch-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      height: 32px;
+      border-radius: 20px;
+      border: 1px solid var(--border-light);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .market-switch-btn:hover,
+    .market-switch-btn:active {
+      background: rgba(108, 92, 231, 0.2);
+      border-color: var(--purple, #6c5ce7);
+    }
+
     /* Tab Segment Bar */
     .segmented-bar {
       display: flex;
@@ -1524,12 +1547,8 @@
               <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
           </button>
-          <button class="icon-btn" id="filterTriggerBtn" title="Filter">
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="4" y1="6" x2="20" y2="6"></line>
-              <line x1="8" y1="12" x2="16" y2="12"></line>
-              <line x1="11" y1="18" x2="13" y2="18"></line>
-            </svg>
+          <button class="market-switch-btn" id="marketSwitchBtn" title="Switch Market (IN / US / ALL)">
+            <span id="marketSwitchText">${state.marketFilter === 'IN' ? '🇮🇳 IN' : state.marketFilter === 'US' ? '🇺🇸 US' : '🌐 ALL'}</span>
           </button>
           <button class="icon-btn" id="moreOptionsBtn" title="Account / Settings">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1636,7 +1655,7 @@
       searchQuery: "",
       sortBy: "added_at", // added_at, priority, name, pct, price, tag
       sortDir: "desc", // asc, desc
-      marketFilter: "all", // "all", "IN", "US"
+      marketFilter: "IN", // "IN", "US", or "all"
       priorityFilter: "all", // "all", "high", "medium", "low", "none"
       tagFilter: "all", // "all", "untagged", or specific tag name
       limit: 12,
@@ -2270,6 +2289,12 @@
       document.getElementById("watchlistPage").style.display = state.page === "watchlist" ? "" : "none";
       document.getElementById("statsPage").style.display = state.page === "stats" ? "" : "none";
 
+      // Update Market Switch Button text dynamically
+      const mText = document.getElementById("marketSwitchText");
+      if (mText) {
+        mText.textContent = state.marketFilter === 'IN' ? '🇮🇳 IN' : state.marketFilter === 'US' ? '🇺🇸 US' : '🌐 ALL';
+      }
+
       // Update Top Right Add button text dynamically based on current page
       const addBtnText = document.getElementById("addBtnText");
       if (addBtnText) {
@@ -2513,19 +2538,6 @@
       view.innerHTML = `
     ${state.fetchStatusText ? `<div class="fetch-status-bar"><span>${state.fetchStatusText}</span></div>` : ''}
 
-    <!-- Market Filter Segment Tabs (IN / US / All) -->
-    <div class="market-tabs-row">
-      <div class="market-tab ${state.marketFilter === 'all' ? 'active' : ''}" data-market-filter="all">
-        <span>🌐 All Markets</span> <span class="market-tab-badge">${activeRows.length}</span>
-      </div>
-      <div class="market-tab ${state.marketFilter === 'IN' ? 'active' : ''}" data-market-filter="IN">
-        <span>🇮🇳 India (NSE)</span> <span class="market-tab-badge">${inRows.length}</span>
-      </div>
-      <div class="market-tab ${state.marketFilter === 'US' ? 'active' : ''}" data-market-filter="US">
-        <span>🇺🇸 US Market</span> <span class="market-tab-badge">${usRows.length}</span>
-      </div>
-    </div>
-
     <!-- Interactive Summary Stats Bar (Click to filter) -->
     <div class="wl-summary-bar">
       <div class="wl-stat-item ${state.priorityFilter === 'all' ? 'active' : ''}" data-prio-filter="all">
@@ -2663,15 +2675,6 @@
       ` : ''}
     </div>
   `;
-
-      // Attach market tab filter listeners
-      document.querySelectorAll("[data-market-filter]").forEach((el) => {
-        el.addEventListener("click", () => {
-          state.marketFilter = el.dataset.marketFilter;
-          state.limit = 12;
-          renderWatchlistPage();
-        });
-      });
 
       // Attach priority filter listeners
       document.querySelectorAll("[data-prio-filter]").forEach((el) => {
@@ -3067,6 +3070,14 @@
         const el = document.getElementById("wlSearchInput");
         if (el) el.focus();
       }, 50);
+    });
+
+    document.getElementById("marketSwitchBtn").addEventListener("click", () => {
+      if (state.marketFilter === "IN") state.marketFilter = "US";
+      else if (state.marketFilter === "US") state.marketFilter = "all";
+      else state.marketFilter = "IN";
+      state.limit = 12;
+      render();
     });
 
     document.getElementById("modalBackdrop").addEventListener("click", (e) => {
