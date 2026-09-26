@@ -591,7 +591,8 @@ let state = {
   watchlistAsOf: null,
   watchlistAdding: false,
   searchQuery: "",
-  sortBy: "added_at", // added_at, priority, name, pct, price
+  sortBy: "added_at", // added_at, priority, name, pct, price, tag
+  sortDir: "desc", // asc, desc
   priorityFilter: "all", // "all", "high", "medium", "low", "none"
   tagFilter: "all", // "all", "untagged", or specific tag name
   limit: 12,
@@ -1415,17 +1416,28 @@ function renderWatchlistPage() {
     filtered = filtered.filter(r => (r.symbol || '').toLowerCase().includes(q) || (r.industry || '').toLowerCase().includes(q) || (r.tag || '').toLowerCase().includes(q));
   }
 
-  // Sort logic including Date Added (added_at)
+  // Sort logic including Date Added (added_at) and bi-directional sort direction (sortDir)
   const priorityRank = { high: 3, medium: 2, low: 1 };
+  const dir = state.sortDir === "asc" ? 1 : -1;
   filtered.sort((a, b) => {
-    if (state.sortBy === "added_at") return (b.added_at || "").localeCompare(a.added_at || "");
-    if (state.sortBy === "name") return (a.symbol || "").localeCompare(b.symbol || "");
-    if (state.sortBy === "pct") return (b.pct_change || 0) - (a.pct_change || 0);
-    if (state.sortBy === "price") return (b.ltp || 0) - (a.ltp || 0);
-    // default: priority then date
-    const pr = (priorityRank[(b.priority || '').toLowerCase()] || 0) - (priorityRank[(a.priority || '').toLowerCase()] || 0);
-    if (pr !== 0) return pr;
-    return (b.added_at || "").localeCompare(a.added_at || "");
+    let res = 0;
+    if (state.sortBy === "added_at") {
+      res = (a.added_at || "").localeCompare(b.added_at || "");
+    } else if (state.sortBy === "name") {
+      res = (a.symbol || "").localeCompare(b.symbol || "");
+    } else if (state.sortBy === "pct") {
+      res = (a.pct_change || 0) - (b.pct_change || 0);
+    } else if (state.sortBy === "price") {
+      res = (a.ltp || 0) - (b.ltp || 0);
+    } else if (state.sortBy === "tag") {
+      res = (a.tag || "").localeCompare(b.tag || "");
+    } else { // priority
+      const prA = priorityRank[(a.priority || '').toLowerCase()] || 0;
+      const prB = priorityRank[(b.priority || '').toLowerCase()] || 0;
+      res = prA - prB;
+      if (res === 0) res = (a.added_at || "").localeCompare(b.added_at || "");
+    }
+    return res * dir;
   });
 
   const visibleRows = filtered.slice(0, state.limit);
@@ -1434,6 +1446,14 @@ function renderWatchlistPage() {
   const isSearchFocused = (document.activeElement === prevSearchInput);
   const selStart = prevSearchInput ? prevSearchInput.selectionStart : null;
   const selEnd = prevSearchInput ? prevSearchInput.selectionEnd : null;
+
+  const getSortArrow = (colKey) => {
+    const isMatch = (colKey === 'price' && (state.sortBy === 'price' || state.sortBy === 'pct')) ||
+                    (colKey === 'priority' && (state.sortBy === 'priority' || state.sortBy === 'added_at')) ||
+                    (state.sortBy === colKey);
+    if (!isMatch) return '';
+    return state.sortDir === 'asc' ? ' ▲' : ' ▼';
+  };
 
   view.innerHTML = `
     ${state.fetchStatusText ? `<div class="fetch-status-bar"><span>${state.fetchStatusText}</span></div>` : ''}
@@ -1502,10 +1522,10 @@ function renderWatchlistPage() {
 
     <!-- Table Header Bar (Clickable for Sorting) -->
     <div class="list-table-header">
-      <div class="sort-header-col" data-sort-header="name" style="cursor:pointer;" title="Sort by Symbol">Symbol ${state.sortBy === 'name' ? '▲' : ''}</div>
-      <div class="col-price sort-header-col" data-sort-header="price" style="cursor:pointer;" title="Sort by Price">Price<br>% Change ${state.sortBy === 'price' ? '▼' : state.sortBy === 'pct' ? '▼' : ''}</div>
-      <div class="col-tag sort-header-col" data-sort-header="tag" style="cursor:pointer;" title="Sort by Tag">Tag ${state.sortBy === 'tag' ? '▲' : ''}</div>
-      <div class="col-priority sort-header-col" data-sort-header="priority" style="cursor:pointer;" title="Sort by Priority">Priority<br>Added ${state.sortBy === 'priority' ? '▼' : state.sortBy === 'added_at' ? '▼' : ''}</div>
+      <div class="sort-header-col" data-sort-header="name" style="cursor:pointer;" title="Sort by Symbol">Symbol${getSortArrow('name')}</div>
+      <div class="col-price sort-header-col" data-sort-header="price" style="cursor:pointer;" title="Sort by Price">Price<br>% Change${getSortArrow('price')}</div>
+      <div class="col-tag sort-header-col" data-sort-header="tag" style="cursor:pointer;" title="Sort by Tag">Tag${getSortArrow('tag')}</div>
+      <div class="col-priority sort-header-col" data-sort-header="priority" style="cursor:pointer;" title="Sort by Priority / Added">Priority<br>Added${getSortArrow('priority')}</div>
       <div></div>
     </div>
 
@@ -1600,10 +1620,22 @@ function renderWatchlistPage() {
     });
   }
 
-  // Attach sort header click listeners
+  // Attach sort header click listeners (Click to toggle Asc/Desc)
   document.querySelectorAll("[data-sort-header]").forEach((el) => {
     el.addEventListener("click", () => {
-      state.sortBy = el.dataset.sortHeader;
+      const header = el.dataset.sortHeader;
+      const isCurrentHeader = (
+        state.sortBy === header ||
+        (header === 'price' && (state.sortBy === 'price' || state.sortBy === 'pct')) ||
+        (header === 'priority' && (state.sortBy === 'priority' || state.sortBy === 'added_at'))
+      );
+
+      if (isCurrentHeader) {
+        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        state.sortBy = header;
+        state.sortDir = (header === "name" || header === "tag") ? "asc" : "desc";
+      }
       renderWatchlistPage();
     });
   });
@@ -1622,7 +1654,13 @@ function renderWatchlistPage() {
   const sortSelect = document.getElementById("wlSortSelect");
   if (sortSelect) {
     sortSelect.addEventListener("change", (e) => {
-      state.sortBy = e.target.value;
+      const val = e.target.value;
+      if (state.sortBy === val) {
+        state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+      } else {
+        state.sortBy = val;
+        state.sortDir = (val === "name" || val === "tag") ? "asc" : "desc";
+      }
       renderWatchlistPage();
     });
   }
