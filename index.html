@@ -873,6 +873,101 @@
       color: var(--bad);
     }
 
+    /* Advanced Analytics & PnL Dashboard Styles */
+    .analytics-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg, 16px);
+      padding: 16px 18px;
+      margin-bottom: 20px;
+    }
+
+    .analytics-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .analytics-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(108, 92, 231, 0.15);
+      color: var(--purple, #6c5ce7);
+      font-weight: 600;
+    }
+
+    .chart-container {
+      width: 100%;
+      height: 180px;
+      position: relative;
+    }
+
+    .pnl-chart-svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    .tag-analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .tag-card {
+      background: var(--bg, #0d1117);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      position: relative;
+    }
+
+    .tag-card .tag-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .tag-card .tag-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tag-card .tag-meta {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 8px 0 6px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00b894, #00cec9);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-bar-fill.neg {
+      background: linear-gradient(90deg, #d63031, #ff7675);
+    }
+
     .filter-tabs {
       display: flex;
       gap: 6px;
@@ -2123,46 +2218,247 @@
       const open = trades.filter((t) => t.status === "Open");
       const closed = trades.filter((t) => t.status === "Closed");
       const wins = closed.filter((t) => (t.plPct || 0) > 0);
+      const losses = closed.filter((t) => (t.plPct || 0) < 0);
       const breakeven = closed.filter((t) => Math.abs(t.plPct || 0) < 0.05);
+
       const winRate = closed.length ? (wins.length / closed.length) * 100 : null;
+
+      const grossProfit = wins.reduce((s, t) => s + (t.plPct || 0), 0);
+      const grossLoss = Math.abs(losses.reduce((s, t) => s + (t.plPct || 0), 0));
+      const profitFactor = grossLoss > 0 ? (grossProfit / grossLoss) : (grossProfit > 0 ? grossProfit : null);
+
       const avgPl = closed.length ? closed.reduce((s, t) => s + (t.plPct || 0), 0) / closed.length : null;
+
       const rMultiples = closed
-        .filter((t) => t.riskPct)
+        .filter((t) => t.riskPct && t.plPct !== null)
         .map((t) => (t.plPct || 0) / t.riskPct);
       const avgRR = rMultiples.length ? rMultiples.reduce((a, b) => a + b, 0) / rMultiples.length : null;
+
+      const totalPnL = closed.reduce((s, t) => s + (t.plPct || 0), 0);
+      const bestTrade = closed.length ? Math.max(...closed.map((t) => t.plPct || 0)) : null;
+      const worstTrade = closed.length ? Math.min(...closed.map((t) => t.plPct || 0)) : null;
+
       return {
-        open: open.length, closed: closed.length, breakeven: breakeven.length,
-        winRate, avgPl, avgRR,
+        open: open.length,
+        closed: closed.length,
+        winsCount: wins.length,
+        lossesCount: losses.length,
+        breakeven: breakeven.length,
+        winRate,
+        profitFactor,
+        avgPl,
+        avgRR,
+        totalPnL,
+        bestTrade,
+        worstTrade,
       };
+    }
+
+    function renderPnLCurveChart(closedTrades) {
+      if (!closedTrades || !closedTrades.length) {
+        return `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:12.5px;">No closed trades recorded yet to plot equity curve.</div>`;
+      }
+
+      const sorted = closedTrades.slice().sort((a, b) => {
+        const da = a.exitDate || a.date || "";
+        const db = b.exitDate || b.date || "";
+        return da.localeCompare(db);
+      });
+
+      let runningPnL = 0;
+      let peak = 0;
+      let maxDrawdown = 0;
+
+      const points = sorted.map((t, idx) => {
+        runningPnL += (t.plPct || 0);
+        if (runningPnL > peak) peak = runningPnL;
+        const dd = peak - runningPnL;
+        if (dd > maxDrawdown) maxDrawdown = dd;
+        return {
+          index: idx,
+          symbol: t.symbol,
+          date: t.exitDate || t.date || `Trade #${idx+1}`,
+          plPct: t.plPct || 0,
+          cumPnL: runningPnL
+        };
+      });
+
+      const width = 500;
+      const height = 160;
+      const padding = { top: 20, right: 20, bottom: 30, left: 40 };
+
+      const allValues = [0, ...points.map(p => p.cumPnL)];
+      let minVal = Math.min(...allValues);
+      let maxVal = Math.max(...allValues);
+
+      const range = (maxVal - minVal) || 10;
+      minVal -= range * 0.1;
+      maxVal += range * 0.1;
+
+      const getX = (idx) => padding.left + (idx / Math.max(1, points.length - 1)) * (width - padding.left - padding.right);
+      const getY = (val) => height - padding.bottom - ((val - minVal) / (maxVal - minVal)) * (height - padding.top - padding.bottom);
+
+      const zeroY = getY(0);
+
+      let pathD = `M ${padding.left} ${getY(0)}`;
+      points.forEach((p, i) => {
+        pathD += ` L ${getX(i)} ${getY(p.cumPnL)}`;
+      });
+
+      const areaD = `${pathD} L ${getX(points.length - 1)} ${zeroY} L ${padding.left} ${zeroY} Z`;
+
+      const isPositive = runningPnL >= 0;
+      const lineColor = isPositive ? "#00b894" : "#ff7675";
+      const gradientId = isPositive ? "posGrad" : "negGrad";
+
+      const dotsHtml = points.map((p, i) => {
+        const cx = getX(i);
+        const cy = getY(p.cumPnL);
+        const color = p.plPct >= 0 ? "#00b894" : "#ff7675";
+        return `<circle cx="${cx}" cy="${cy}" r="4" fill="${color}" stroke="var(--panel)" stroke-width="2">
+                  <title>${p.symbol} (${p.date}): ${p.plPct >= 0 ? '+' : ''}${p.plPct.toFixed(1)}% | Cum: ${p.cumPnL >= 0 ? '+' : ''}${p.cumPnL.toFixed(1)}%</title>
+                </circle>`;
+      }).join("");
+
+      return `
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:12px; flex-wrap:wrap; gap:8px;">
+          <div><span style="color:var(--text-muted)">Total Realized:</span> <strong class="${runningPnL >= 0 ? 'pos' : 'neg'}">${runningPnL >= 0 ? '+' : ''}${runningPnL.toFixed(2)}%</strong></div>
+          <div><span style="color:var(--text-muted)">Peak Equity:</span> <strong class="pos">+${peak.toFixed(2)}%</strong></div>
+          <div><span style="color:var(--text-muted)">Max Drawdown:</span> <strong class="neg">-${maxDrawdown.toFixed(2)}%</strong></div>
+        </div>
+        <div class="chart-container">
+          <svg class="pnl-chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="posGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#00b894" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#00b894" stop-opacity="0.0"/>
+              </linearGradient>
+              <linearGradient id="negGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#ff7675" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#ff7675" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            <line x1="${padding.left}" y1="${zeroY}" x2="${width - padding.right}" y2="${zeroY}" stroke="var(--border)" stroke-dasharray="3,3" stroke-width="1" />
+            <path d="${areaD}" fill="url(#${gradientId})" />
+            <path d="${pathD}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            ${dotsHtml}
+          </svg>
+        </div>
+      `;
+    }
+
+    function renderTagAnalytics(trades) {
+      const closedTrades = trades.filter(t => t.status === "Closed");
+      if (!closedTrades.length) return `<div style="color:var(--text-muted); font-size:12.5px;">No closed trades yet to analyze strategy tags.</div>`;
+
+      const tagStats = {};
+      closedTrades.forEach(t => {
+        const tag = t.tag || (state.watchlist.find(w => w.symbol === t.symbol)?.tag) || "General";
+        if (!tagStats[tag]) {
+          tagStats[tag] = { tag, total: 0, wins: 0, totalPnL: 0, rMultiples: [] };
+        }
+        tagStats[tag].total += 1;
+        if ((t.plPct || 0) > 0) tagStats[tag].wins += 1;
+        tagStats[tag].totalPnL += (t.plPct || 0);
+        if (t.riskPct) {
+          tagStats[tag].rMultiples.push((t.plPct || 0) / t.riskPct);
+        }
+      });
+
+      const tagsList = Object.values(tagStats).map(st => {
+        const winRate = st.total ? (st.wins / st.total) * 100 : 0;
+        const avgRR = st.rMultiples.length ? st.rMultiples.reduce((a,b) => a+b, 0) / st.rMultiples.length : null;
+        return { ...st, winRate, avgRR };
+      }).sort((a, b) => b.totalPnL - a.totalPnL);
+
+      const topWinRateTag = tagsList.slice().sort((a, b) => b.winRate - a.winRate)[0];
+      const topPnLTag = tagsList[0];
+
+      return `
+        <div class="tag-analytics-grid">
+          ${tagsList.map(t => {
+            const isTopWin = topWinRateTag && topWinRateTag.tag === t.tag && t.total >= 2;
+            const isTopPnL = topPnLTag && topPnLTag.tag === t.tag && t.totalPnL > 0;
+            const badge = isTopPnL ? '🚀 Top PnL' : (isTopWin ? '🏆 Best Win Rate' : '');
+            return `
+              <div class="tag-card">
+                <div class="tag-header">
+                  <span class="tag-name">
+                    🏷️ ${t.tag}
+                    ${badge ? `<span class="analytics-badge">${badge}</span>` : ''}
+                  </span>
+                  <span class="tag-meta">${t.wins}/${t.total} Wins</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                  <span style="font-size:12px; color:var(--text-muted);">Win Rate</span>
+                  <span style="font-size:13px; font-weight:700;">${t.winRate.toFixed(1)}%</span>
+                </div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill ${t.winRate < 50 ? 'neg' : ''}" style="width: ${t.winRate}%"></div>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:6px; font-size:12px;">
+                  <span>Net PnL: <strong class="${t.totalPnL >= 0 ? 'pos' : 'neg'}">${t.totalPnL >= 0 ? '+' : ''}${t.totalPnL.toFixed(1)}%</strong></span>
+                  <span>Avg R:R: <strong>${t.avgRR !== null ? t.avgRR.toFixed(2) + 'R' : '—'}</strong></span>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
     }
 
     function renderStats() {
       const s = computeStats(state.trades);
+      const closedTrades = state.trades.filter(t => t.status === "Closed");
+
       const tile = (label, value, cls = "") =>
         `<div class="stat-tile"><div class="label">${label}</div><div class="value ${cls}">${dash(value)}</div></div>`;
+
       document.getElementById("statGrid").innerHTML = [
         tile("Open", s.open),
         tile("Closed", s.closed),
-        tile("Cost-to-cost", s.breakeven),
-        tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, s.winRate >= 50 ? "pos" : "neg"),
-        tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, s.avgRR >= 0 ? "pos" : "neg"),
-        tile("Avg P/L", s.avgPl !== null ? (s.avgPl > 0 ? "+" : "") + fmt(s.avgPl, 2) + "%" : null, s.avgPl >= 0 ? "pos" : "neg"),
+        tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, (s.winRate || 0) >= 50 ? "pos" : "neg"),
+        tile("Profit Factor", s.profitFactor !== null ? fmt(s.profitFactor, 2) : null, (s.profitFactor || 0) >= 1.2 ? "pos" : "neg"),
+        tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, (s.avgRR || 0) >= 0 ? "pos" : "neg"),
+        tile("Total P/L", s.totalPnL !== null ? (s.totalPnL > 0 ? "+" : "") + fmt(s.totalPnL, 2) + "%" : null, (s.totalPnL || 0) >= 0 ? "pos" : "neg"),
       ].join("");
 
       document.getElementById("fullStatsContainer").innerHTML = `
-    <h2 style="font-size:18px; margin-bottom:16px;">Performance Overview</h2>
-    <div class="stat-grid" style="grid-template-columns: repeat(2, 1fr);">
-      ${[
-          tile("Total Trades", state.trades.length),
-          tile("Open Trades", s.open),
-          tile("Closed Trades", s.closed),
-          tile("Breakeven Trades", s.breakeven),
-          tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, s.winRate >= 50 ? "pos" : "neg"),
-          tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, s.avgRR >= 0 ? "pos" : "neg"),
-          tile("Avg P/L %", s.avgPl !== null ? (s.avgPl > 0 ? "+" : "") + fmt(s.avgPl, 2) + "%" : null, s.avgPl >= 0 ? "pos" : "neg"),
-        ].join("")}
-    </div>
-  `;
+        <h2 style="font-size:18px; margin-bottom:16px; font-weight:700;">Performance & PnL Analytics</h2>
+
+        <!-- KPI Summary Grid -->
+        <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:20px;">
+          ${[
+            tile("Total Trades", state.trades.length),
+            tile("Open Trades", s.open),
+            tile("Closed Trades", s.closed),
+            tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, (s.winRate || 0) >= 50 ? "pos" : "neg"),
+            tile("Profit Factor", s.profitFactor !== null ? fmt(s.profitFactor, 2) : null, (s.profitFactor || 0) >= 1.2 ? "pos" : "neg"),
+            tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, (s.avgRR || 0) >= 0 ? "pos" : "neg"),
+            tile("Net PnL %", s.totalPnL !== null ? (s.totalPnL > 0 ? "+" : "") + fmt(s.totalPnL, 2) + "%" : null, (s.totalPnL || 0) >= 0 ? "pos" : "neg"),
+            tile("Best Trade", s.bestTrade !== null ? "+" + fmt(s.bestTrade, 1) + "%" : null, "pos"),
+            tile("Worst Trade", s.worstTrade !== null ? fmt(s.worstTrade, 1) + "%" : null, "neg"),
+          ].join("")}
+        </div>
+
+        <!-- Cumulative PnL Curve Chart -->
+        <div class="analytics-section">
+          <div class="analytics-title">
+            <span>📈 Cumulative Equity Curve (PnL %)</span>
+            <span class="analytics-badge">Closed Trades</span>
+          </div>
+          ${renderPnLCurveChart(closedTrades)}
+        </div>
+
+        <!-- Tag & Strategy Performance Breakdown -->
+        <div class="analytics-section">
+          <div class="analytics-title">
+            <span>🏷️ Performance by Tag / Strategy</span>
+            <span class="analytics-badge">${state.trades.length} Trades Analyzed</span>
+          </div>
+          ${renderTagAnalytics(state.trades)}
+        </div>
+      `;
     }
 
     const TABS = [
