@@ -2377,6 +2377,11 @@
       const entry = state.watchlist.find((r) => r.symbol === symbol);
       const currentTag = entry ? (entry.tag || "") : "";
 
+      const defaultPresets = ["Breakout", "Swing", "Long Term", "F&O", "Value", "Momentum", "Core"];
+      const userTags = Array.from(new Set(state.watchlist.filter(r => !r.removed).map(r => (r.tag || '').trim()).filter(Boolean)));
+      const combinedTags = Array.from(new Set([...userTags, ...defaultPresets]));
+      const pillsHtml = combinedTags.map(t => `<span class="tag-preset-pill ${currentTag === t ? 'active' : ''}" data-preset="${t}">${t}</span>`).join('');
+
       document.getElementById("modalCard").innerHTML = `
     <h2>Set Tag for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
     <div class="form-grid">
@@ -2387,13 +2392,7 @@
       <div class="form-field full">
         <label style="margin-bottom:4px;">Quick Suggestions</label>
         <div class="tag-preset-pills">
-          <span class="tag-preset-pill" data-preset="Breakout">Breakout</span>
-          <span class="tag-preset-pill" data-preset="Swing">Swing</span>
-          <span class="tag-preset-pill" data-preset="Long Term">Long Term</span>
-          <span class="tag-preset-pill" data-preset="F&O">F&O</span>
-          <span class="tag-preset-pill" data-preset="Value">Value</span>
-          <span class="tag-preset-pill" data-preset="Momentum">Momentum</span>
-          <span class="tag-preset-pill" data-preset="Core">Core</span>
+          ${pillsHtml}
         </div>
       </div>
     </div>
