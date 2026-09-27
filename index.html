@@ -226,14 +226,21 @@
     .stock-target-subline {
       margin-top: 3px;
       display: flex;
-      align-items: center;
-      flex-wrap: nowrap;
-      gap: 4px;
+      flex-direction: column;
+      gap: 2px;
       cursor: pointer;
-      line-height: 1.2;
+      line-height: 1.25;
       min-width: 0;
       max-width: 100%;
       overflow: hidden;
+    }
+
+    .target-sub-chips-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 4px;
+      min-width: 0;
     }
 
     .target-sub-chip {
@@ -266,17 +273,17 @@
       border: 1px solid rgba(108, 92, 231, 0.25);
     }
 
-    .target-sub-note {
+    .target-sub-note-row {
       font-size: 10.5px;
       color: var(--text-dim);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       min-width: 0;
-      flex: 1;
+      width: 100%;
     }
 
-    .stock-target-subline:hover .target-sub-note {
+    .stock-target-subline:hover .target-sub-note-row {
       color: var(--text);
     }
 
@@ -3561,7 +3568,8 @@
         const tvUrl = r.tv_link || tvLink(r.symbol, market);
         const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
 
-        const hasNote = r.note || (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '') || r.targetDays;
+        const hasChips = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '') || r.targetDays;
+        const hasNote = r.note || hasChips;
         const targetMoveText = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '')
           ? `<span class="target-sub-chip target">🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%</span>`
           : '';
@@ -3569,10 +3577,14 @@
           ? `<span class="target-sub-chip sl">🛑 -${Math.abs(r.slMovePct)}%</span>`
           : '';
         const targetDaysText = r.targetDays ? `<span class="target-sub-chip days">⏱️ ${r.targetDays}d</span>` : '';
-        const noteText = r.note ? `<span class="target-sub-note" title="${r.note}">📝 ${r.note}</span>` : '';
+        const noteText = r.note ? `<div class="target-sub-note-row" title="${r.note}">📝 ${r.note}</div>` : '';
+        
+        const chipsRowHtml = hasChips ? `<div class="target-sub-chips-row">${targetMoveText}${slMoveText}${targetDaysText}</div>` : '';
+
         const targetSublineHtml = hasNote ? `
           <div class="stock-target-subline" data-edit-note="${r.symbol}" title="Click to edit note / targets">
-            ${targetMoveText}${slMoveText}${targetDaysText}${noteText}
+            ${chipsRowHtml}
+            ${noteText}
           </div>
         ` : '';
 
