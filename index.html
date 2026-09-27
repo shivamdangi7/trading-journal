@@ -3225,7 +3225,7 @@
     <div style="font-weight:700; padding:6px 12px 8px; font-size:12px; color:var(--text-dim); border-bottom:1px solid var(--border); margin-bottom:4px;">
       ${symbol} Options
     </div>
-    <div class="action-menu-item" id="logTradeMenuItemBtn">➕ Log Trade in Journal</div>
+    ${state.compactMode ? `<div class="action-menu-item" id="logTradeMenuItemBtn">➕ Log Trade in Journal</div>` : ''}
     <div class="action-menu-item" id="editTagMenuItemBtn">🏷️ Edit / Assign Tag</div>
     <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
     <div style="font-weight:700; padding:4px 12px; font-size:11px; color:var(--text-muted);">Priority</div>
@@ -3251,10 +3251,13 @@
 
       backdrop.onclick = close;
 
-      document.getElementById("logTradeMenuItemBtn").addEventListener("click", () => {
-        close();
-        logTradeFromWatchlist(symbol);
-      });
+      const logBtn = document.getElementById("logTradeMenuItemBtn");
+      if (logBtn) {
+        logBtn.addEventListener("click", () => {
+          close();
+          logTradeFromWatchlist(symbol);
+        });
+      }
 
       document.getElementById("editTagMenuItemBtn").addEventListener("click", () => {
         close();
