@@ -883,6 +883,14 @@
       text-align: center;
       border: 1px solid transparent;
       display: inline-block;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s ease, filter 0.15s ease;
+    }
+
+    .priority-badge:hover {
+      filter: brightness(1.2);
+      transform: scale(1.05);
     }
 
     .priority-badge.high {
@@ -3455,7 +3463,7 @@
                   ${tagHtml}
                 </div>
                 <div class="stock-priority-col">
-                  <span class="priority-badge ${prio || 'none'}">${prioLabel}</span>
+                  <span class="priority-badge ${prio || 'none'}" data-toggle-prio="${r.symbol}" title="Click to cycle priority (None -> High -> Medium -> Low)">${prioLabel}</span>
                   ${addedDate ? `<span class="stock-added-date">${addedDate}</span>` : ''}
                 </div>
               </div>
@@ -3564,6 +3572,19 @@
       }
 
       // Action listeners
+      document.querySelectorAll("[data-toggle-prio]").forEach((el) =>
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const sym = el.dataset.togglePrio;
+          const stock = state.watchlist.find(r => r.symbol === sym);
+          if (!stock) return;
+          const cur = (stock.priority || '').toLowerCase();
+          const cycleMap = { 'none': 'high', '': 'high', 'high': 'medium', 'medium': 'low', 'low': 'none' };
+          const nextPrio = cycleMap[cur] !== undefined ? cycleMap[cur] : 'high';
+          setWatchlistPriority(sym, nextPrio === 'none' ? '' : nextPrio);
+        })
+      );
+
       document.querySelectorAll("[data-log-symbol]").forEach((el) =>
         el.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -3606,12 +3627,6 @@
     <div class="action-menu-item" id="editNoteMenuItemBtn">📝 Set Target & Note</div>
     <div class="action-menu-item" id="editTagMenuItemBtn">🏷️ Edit / Assign Tag</div>
     <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
-    <div style="font-weight:700; padding:4px 12px; font-size:11px; color:var(--text-muted);">Priority</div>
-    <div class="action-menu-item" data-set-prio="high">🔴 High Priority</div>
-    <div class="action-menu-item" data-set-prio="medium">🟡 Medium Priority</div>
-    <div class="action-menu-item" data-set-prio="low">🟢 Low Priority</div>
-    <div class="action-menu-item" data-set-prio="">⚪ No Priority</div>
-    <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
     <div class="action-menu-item danger" id="removeStockItemBtn">🗑️ Remove Symbol</div>
   `;
 
@@ -3651,13 +3666,6 @@
       document.getElementById("editTagMenuItemBtn").addEventListener("click", () => {
         close();
         openEditTagModal(symbol);
-      });
-
-      menu.querySelectorAll("[data-set-prio]").forEach(el => {
-        el.addEventListener("click", () => {
-          close();
-          setWatchlistPriority(symbol, el.dataset.setPrio);
-        });
       });
 
       document.getElementById("removeStockItemBtn").addEventListener("click", () => {
