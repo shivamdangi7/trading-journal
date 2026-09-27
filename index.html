@@ -3199,6 +3199,14 @@
           res = (a.ltp || 0) - (b.ltp || 0);
         } else if (state.sortBy === "tag") {
           res = (a.tag || "").localeCompare(b.tag || "");
+        } else if (state.sortBy === "note") {
+          const hasA = !!(a.note || a.targetMovePct || a.slMovePct || a.targetDays);
+          const hasB = !!(b.note || b.targetMovePct || b.slMovePct || b.targetDays);
+          if (hasA !== hasB) {
+            res = hasA ? 1 : -1;
+          } else {
+            res = (a.note || "").localeCompare(b.note || "");
+          }
         } else { // priority
           const prA = priorityRank[(a.priority || '').toLowerCase()] || 0;
           const prB = priorityRank[(b.priority || '').toLowerCase()] || 0;
@@ -3279,6 +3287,7 @@
           <select id="wlSortSelect">
             <option value="added_at" ${state.sortBy === 'added_at' ? 'selected' : ''}>Sort: Date Added</option>
             <option value="priority" ${state.sortBy === 'priority' ? 'selected' : ''}>Sort: Priority</option>
+            <option value="note" ${state.sortBy === 'note' ? 'selected' : ''}>Sort: Notes / Target</option>
             <option value="name" ${state.sortBy === 'name' ? 'selected' : ''}>Sort: Name</option>
             <option value="pct" ${state.sortBy === 'pct' ? 'selected' : ''}>Sort: % Change</option>
             <option value="price" ${state.sortBy === 'price' ? 'selected' : ''}>Sort: Price</option>
