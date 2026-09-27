@@ -210,6 +210,54 @@
       display: none !important;
     }
 
+    /* Stock Note & Target Preview Styles */
+    .stock-note-bar {
+      margin-top: 6px;
+      padding: 5px 10px;
+      background: rgba(108, 92, 231, 0.08);
+      border: 1px solid rgba(108, 92, 231, 0.2);
+      border-radius: 8px;
+      font-size: 11.5px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      word-break: break-word;
+    }
+
+    .stock-note-bar:hover {
+      background: rgba(108, 92, 231, 0.18);
+      border-color: var(--purple);
+      color: var(--text);
+    }
+
+    .preset-pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .preset-pill, .preset-pill-days {
+      font-size: 11.5px;
+      padding: 3px 9px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--text-muted);
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+
+    .preset-pill:hover, .preset-pill-days:hover {
+      background: var(--purple-bg);
+      color: var(--purple);
+      border-color: var(--purple);
+    }
+
     /* Tab Segment Bar */
     .segmented-bar {
       display: flex;
@@ -2269,6 +2317,30 @@
       }
     }
 
+    async function setWatchlistNote(symbol, { targetMovePct, targetDays, note }) {
+      const entry = state.watchlist.find((r) => r.symbol === symbol);
+      if (!entry) return;
+      const prevMove = entry.targetMovePct;
+      const prevDays = entry.targetDays;
+      const prevNote = entry.note;
+
+      entry.targetMovePct = targetMovePct;
+      entry.targetDays = targetDays;
+      entry.note = note || null;
+      entry.updated_at = new Date().toISOString();
+
+      try {
+        if (getToken()) await saveWatchlist();
+        render();
+      } catch (e) {
+        entry.targetMovePct = prevMove;
+        entry.targetDays = prevDays;
+        entry.note = prevNote;
+        alert("Couldn't save note: " + e.message);
+        render();
+      }
+    }
+
     async function removeFromWatchlist(symbol) {
       if (!confirm(`Remove ${symbol} from the watchlist?`)) return;
       const entry = state.watchlist.find((r) => r.symbol === symbol);
@@ -2751,6 +2823,17 @@
       openModal(null);
       document.getElementById("f_symbol").value = symbol;
       document.getElementById("f_date").value = new Date().toISOString().slice(0, 10);
+      
+      const entry = state.watchlist.find(w => w.symbol === symbol);
+      if (entry) {
+        const parts = [];
+        if (entry.targetMovePct) parts.push(`Target: +${entry.targetMovePct}%`);
+        if (entry.targetDays) parts.push(`Timeframe: ${entry.targetDays}d`);
+        if (entry.note) parts.push(entry.note);
+        if (parts.length) {
+          document.getElementById("f_reasonForTrading").value = parts.join(" | ");
+        }
+      }
     }
 
     function openAddSymbolModal() {
@@ -2881,6 +2964,93 @@
 
       document.getElementById("modalBackdrop").classList.add("open");
       setTimeout(() => tagInput?.focus(), 100);
+    }
+
+    function openEditNoteModal(symbol) {
+      const entry = state.watchlist.find((r) => r.symbol === symbol);
+      if (!entry) return;
+
+      const currentMove = entry.targetMovePct !== undefined && entry.targetMovePct !== null ? entry.targetMovePct : "";
+      const currentDays = entry.targetDays !== undefined && entry.targetDays !== null ? entry.targetDays : "";
+      const currentNote = entry.note || "";
+
+      document.getElementById("modalCard").innerHTML = `
+    <h2>Target & Note for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
+    <div class="form-grid">
+      <div class="form-field">
+        <label>Expected Move (%)</label>
+        <input type="number" step="any" id="f_noteTargetMove" placeholder="e.g. 15 for +15%" value="${currentMove}">
+        <div class="preset-pill-group">
+          <span class="preset-pill" data-val="5">+5%</span>
+          <span class="preset-pill" data-val="10">+10%</span>
+          <span class="preset-pill" data-val="15">+15%</span>
+          <span class="preset-pill" data-val="20">+20%</span>
+          <span class="preset-pill" data-val="25">+25%</span>
+          <span class="preset-pill" data-val="30">+30%</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Timeframe (Days)</label>
+        <input type="number" id="f_noteTargetDays" placeholder="e.g. 7 for 7 days" value="${currentDays}">
+        <div class="preset-pill-group">
+          <span class="preset-pill-days" data-val="3">3d</span>
+          <span class="preset-pill-days" data-val="5">5d</span>
+          <span class="preset-pill-days" data-val="7">7d</span>
+          <span class="preset-pill-days" data-val="14">14d</span>
+          <span class="preset-pill-days" data-val="30">30d</span>
+        </div>
+      </div>
+      <div class="form-field full">
+        <label>Watch Reason & Notes</label>
+        <textarea id="f_noteText" rows="3" placeholder="e.g. Breakout near 200 EMA, watching closely for volume confirmation">${currentNote}</textarea>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:20px;">
+      <button class="tool danger" id="removeNoteBtn" style="${(currentMove !== '' || currentDays !== '' || currentNote) ? '' : 'display:none;'}">Delete Note</button>
+      <div class="right">
+        <button class="tool" id="cancelNoteBtn">Cancel</button>
+        <button class="tool primary" id="saveNoteBtn">Save Note</button>
+      </div>
+    </div>
+  `;
+
+      document.getElementById("modalCloseX").addEventListener("click", closeModal);
+      document.getElementById("cancelNoteBtn").addEventListener("click", closeModal);
+
+      const moveInput = document.getElementById("f_noteTargetMove");
+      const daysInput = document.getElementById("f_noteTargetDays");
+
+      document.querySelectorAll(".preset-pill").forEach(p => {
+        p.addEventListener("click", () => { moveInput.value = p.dataset.val; });
+      });
+
+      document.querySelectorAll(".preset-pill-days").forEach(p => {
+        p.addEventListener("click", () => { daysInput.value = p.dataset.val; });
+      });
+
+      document.getElementById("saveNoteBtn").addEventListener("click", async () => {
+        const moveVal = moveInput.value ? parseFloat(moveInput.value) : null;
+        const daysVal = daysInput.value ? parseInt(daysInput.value) : null;
+        const noteText = document.getElementById("f_noteText").value.trim();
+
+        await setWatchlistNote(symbol, {
+          targetMovePct: moveVal,
+          targetDays: daysVal,
+          note: noteText
+        });
+        closeModal();
+      });
+
+      const removeBtn = document.getElementById("removeNoteBtn");
+      if (removeBtn) {
+        removeBtn.addEventListener("click", async () => {
+          await setWatchlistNote(symbol, { targetMovePct: null, targetDays: null, note: null });
+          closeModal();
+        });
+      }
+
+      document.getElementById("modalBackdrop").classList.add("open");
+      setTimeout(() => moveInput?.focus(), 100);
     }
 
     function formatAddedDate(added_at) {
@@ -3064,6 +3234,18 @@
         const tvUrl = r.tv_link || tvLink(r.symbol, market);
         const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
 
+        const hasNote = r.note || r.targetMovePct || r.targetDays;
+        const targetMoveText = r.targetMovePct ? `🎯 +${r.targetMovePct}%` : '';
+        const targetDaysText = r.targetDays ? `⏱️ ${r.targetDays}d` : '';
+        const noteText = r.note ? `📝 ${r.note}` : '';
+        const noteParts = [targetMoveText, targetDaysText, noteText].filter(Boolean).join(' • ');
+
+        const noteBarHtml = hasNote ? `
+          <div class="stock-note-bar" data-edit-note="${r.symbol}" title="Click to edit note / target">
+            <span>${noteParts}</span>
+          </div>
+        ` : '';
+
         return `
           <div class="stock-item" data-symbol="${r.symbol}">
             <div class="priority-stripe ${prio || 'none'}"></div>
@@ -3098,6 +3280,7 @@
                 </button>
               </div>
             </div>
+            ${noteBarHtml}
           </div>
         `;
       }).join('') : `<div id="emptyStub">No matching stocks found in this view.</div>`}
@@ -3208,6 +3391,13 @@
         })
       );
 
+      document.querySelectorAll("[data-edit-note]").forEach((el) =>
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          openEditNoteModal(el.dataset.editNote);
+        })
+      );
+
       document.querySelectorAll(".item-menu-btn").forEach((el) =>
         el.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -3226,6 +3416,7 @@
       ${symbol} Options
     </div>
     ${state.compactMode ? `<div class="action-menu-item" id="logTradeMenuItemBtn">➕ Log Trade in Journal</div>` : ''}
+    <div class="action-menu-item" id="editNoteMenuItemBtn">📝 Set Target & Note</div>
     <div class="action-menu-item" id="editTagMenuItemBtn">🏷️ Edit / Assign Tag</div>
     <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
     <div style="font-weight:700; padding:4px 12px; font-size:11px; color:var(--text-muted);">Priority</div>
@@ -3258,6 +3449,11 @@
           logTradeFromWatchlist(symbol);
         });
       }
+
+      document.getElementById("editNoteMenuItemBtn").addEventListener("click", () => {
+        close();
+        openEditNoteModal(symbol);
+      });
 
       document.getElementById("editTagMenuItemBtn").addEventListener("click", () => {
         close();
