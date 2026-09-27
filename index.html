@@ -1895,13 +1895,67 @@
       return result;
     }
 
-    // Fast stock price fetcher matching exact Yahoo Finance symbol format (.NS, .BO, plain)
+    let csvQuotesCache = null;
+    let csvQuotesCacheTime = 0;
+
+    // Daily quotes CSV fallback fetcher for Indian market (updates daily after market closes)
+    async function fetchDailyQuotesCSV() {
+      const now = Date.now();
+      // Cache parsed CSV in memory for 5 minutes
+      if (csvQuotesCache && (now - csvQuotesCacheTime) < 300000) {
+        return csvQuotesCache;
+      }
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch("https://storage.googleapis.com/watchlist-pro-35adf.firebasestorage.app/daily-quotes/prices.csv.gz", { signal: controller.signal });
+        clearTimeout(timer);
+        if (!res.ok) return csvQuotesCache || {};
+        const text = await res.text();
+        const lines = text.split("\n");
+        const resultMap = {};
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+          const parts = line.split(",");
+          if (parts.length < 4) continue;
+          // exchange, symbol, close, prev
+          const sym = parts[1].trim().toUpperCase();
+          const close = parseFloat(parts[2]);
+          const prev = parseFloat(parts[3]);
+          if (!isNaN(close)) {
+            const pct = (!isNaN(prev) && prev > 0) ? ((close - prev) / prev) * 100 : 0;
+            const norm = normalizeStockSymbol(sym);
+            const dataObj = { ltp: close, pct_change: pct };
+            resultMap[sym] = dataObj;
+            resultMap[norm] = dataObj;
+            const aliases = PRICE_ALIASES[norm] || [];
+            aliases.forEach(a => { resultMap[a] = dataObj; });
+          }
+        }
+        csvQuotesCache = resultMap;
+        csvQuotesCacheTime = now;
+        return resultMap;
+      } catch (e) {
+        console.warn("CSV daily quotes fallback fetch failed:", e);
+        return csvQuotesCache || {};
+      }
+    }
+
+    // Fast stock price fetcher with daily CSV fallback for Indian stocks & Yahoo Finance for US
     async function fetchYahooPrice(symbol, market = "IN") {
       const symRaw = symbol.trim().toUpperCase();
       const norm = normalizeStockSymbol(symRaw);
 
       const batchRes = await fetchBatchPricesFromAPI([{ symbol: symRaw, market }]);
       if (batchRes[symRaw]) return batchRes[symRaw];
+
+      if (market !== "US") {
+        const csvMap = await fetchDailyQuotesCSV();
+        const found = csvMap[symRaw] || csvMap[norm];
+        if (found) return found;
+      }
 
       // Direct Yahoo Finance ticker candidates
       const variants = PRICE_ALIASES[norm] || [norm];
@@ -1977,14 +2031,33 @@
       // 2. Fallback for any stock not returned in batch
       const missingStocks = stocksToFetch.filter(s => !batchResults[s.symbol.trim().toUpperCase()]);
       if (missingStocks.length) {
+        const missingIndian = missingStocks.filter(s => (s.market || "IN") !== "US");
+        let csvMap = {};
+        if (missingIndian.length) {
+          csvMap = await fetchDailyQuotesCSV();
+        }
+
         await Promise.all(missingStocks.map(async (stock) => {
-          const res = await fetchYahooPrice(stock.symbol, stock.market || "IN");
-          if (res && res.ltp !== null) {
-            stock.ltp = res.ltp;
-            stock.pct_change = res.pct_change;
+          const sym = stock.symbol.trim().toUpperCase();
+          const norm = normalizeStockSymbol(sym);
+          const isUs = (stock.market || "IN") === "US";
+
+          if (!isUs && (csvMap[sym] || csvMap[norm])) {
+            const item = csvMap[sym] || csvMap[norm];
+            stock.ltp = item.ltp;
+            stock.pct_change = item.pct_change;
             stock.updated_at = new Date().toISOString();
-            cache[stock.symbol] = { ltp: res.ltp, pct_change: res.pct_change, updated_at: stock.updated_at };
+            cache[sym] = { ltp: stock.ltp, pct_change: stock.pct_change, updated_at: stock.updated_at };
             updated++;
+          } else {
+            const res = await fetchYahooPrice(stock.symbol, stock.market || "IN");
+            if (res && res.ltp !== null) {
+              stock.ltp = res.ltp;
+              stock.pct_change = res.pct_change;
+              stock.updated_at = new Date().toISOString();
+              cache[sym] = { ltp: res.ltp, pct_change: res.pct_change, updated_at: stock.updated_at };
+              updated++;
+            }
           }
         }));
       }
