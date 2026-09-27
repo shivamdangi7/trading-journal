@@ -1803,7 +1803,7 @@
       marketFilter: "IN", // "IN", "US", or "all"
       priorityFilter: "all", // "all", "high", "medium", "low", "none"
       tagFilter: "all", // "all", "untagged", or specific tag name
-      limit: 12,
+      limit: 100,
       fetchingPrices: false,
       fetchStatusText: "",
       compactMode: localStorage.getItem("trading_journal_compact_mode") === "true"
@@ -3118,7 +3118,7 @@
       document.querySelectorAll("[data-prio-filter]").forEach((el) => {
         el.addEventListener("click", () => {
           state.priorityFilter = el.dataset.prioFilter;
-          state.limit = 12;
+          state.limit = 100;
           renderWatchlistPage();
         });
       });
@@ -3163,7 +3163,7 @@
       if (tagFilterSelect) {
         tagFilterSelect.addEventListener("change", (e) => {
           state.tagFilter = e.target.value;
-          state.limit = 12;
+          state.limit = 100;
           renderWatchlistPage();
         });
       }
@@ -3187,7 +3187,7 @@
       const loadMoreBtn = document.getElementById("loadMoreBtn");
       if (loadMoreBtn) {
         loadMoreBtn.addEventListener("click", () => {
-          state.limit += 12;
+          state.limit += 50;
           renderWatchlistPage();
         });
       }
@@ -3512,7 +3512,7 @@
 
     document.getElementById("marketSwitchBtn").addEventListener("click", () => {
       state.marketFilter = state.marketFilter === "IN" ? "US" : "IN";
-      state.limit = 12;
+      state.limit = 100;
       render();
     });
 
