@@ -258,6 +258,18 @@
       border-color: var(--purple);
     }
 
+    .preset-pill.pos-pill:hover {
+      background: rgba(0, 184, 148, 0.15);
+      color: #00b894;
+      border-color: #00b894;
+    }
+
+    .preset-pill.neg-pill:hover {
+      background: rgba(255, 118, 117, 0.15);
+      color: #ff7675;
+      border-color: #ff7675;
+    }
+
     /* Tab Segment Bar */
     .segmented-bar {
       display: flex;
@@ -2827,7 +2839,10 @@
       const entry = state.watchlist.find(w => w.symbol === symbol);
       if (entry) {
         const parts = [];
-        if (entry.targetMovePct) parts.push(`Target: +${entry.targetMovePct}%`);
+        if (entry.targetMovePct !== undefined && entry.targetMovePct !== null && entry.targetMovePct !== '') {
+          const sign = entry.targetMovePct > 0 ? '+' : '';
+          parts.push(`Target: ${sign}${entry.targetMovePct}%`);
+        }
         if (entry.targetDays) parts.push(`Timeframe: ${entry.targetDays}d`);
         if (entry.note) parts.push(entry.note);
         if (parts.length) {
@@ -2979,14 +2994,22 @@
     <div class="form-grid">
       <div class="form-field">
         <label>Expected Move (%)</label>
-        <input type="number" step="any" id="f_noteTargetMove" placeholder="e.g. 15 for +15%" value="${currentMove}">
+        <input type="number" step="any" id="f_noteTargetMove" placeholder="e.g. 15 for +15%, -10 for -10%" value="${currentMove}">
+        <div class="preset-pill-group" style="margin-bottom: 4px;">
+          <span class="preset-pill pos-pill" data-val="5">+5%</span>
+          <span class="preset-pill pos-pill" data-val="10">+10%</span>
+          <span class="preset-pill pos-pill" data-val="15">+15%</span>
+          <span class="preset-pill pos-pill" data-val="20">+20%</span>
+          <span class="preset-pill pos-pill" data-val="25">+25%</span>
+          <span class="preset-pill pos-pill" data-val="30">+30%</span>
+        </div>
         <div class="preset-pill-group">
-          <span class="preset-pill" data-val="5">+5%</span>
-          <span class="preset-pill" data-val="10">+10%</span>
-          <span class="preset-pill" data-val="15">+15%</span>
-          <span class="preset-pill" data-val="20">+20%</span>
-          <span class="preset-pill" data-val="25">+25%</span>
-          <span class="preset-pill" data-val="30">+30%</span>
+          <span class="preset-pill neg-pill" data-val="-5">-5%</span>
+          <span class="preset-pill neg-pill" data-val="-10">-10%</span>
+          <span class="preset-pill neg-pill" data-val="-15">-15%</span>
+          <span class="preset-pill neg-pill" data-val="-20">-20%</span>
+          <span class="preset-pill neg-pill" data-val="-25">-25%</span>
+          <span class="preset-pill neg-pill" data-val="-30">-30%</span>
         </div>
       </div>
       <div class="form-field">
@@ -3234,8 +3257,10 @@
         const tvUrl = r.tv_link || tvLink(r.symbol, market);
         const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
 
-        const hasNote = r.note || r.targetMovePct || r.targetDays;
-        const targetMoveText = r.targetMovePct ? `🎯 +${r.targetMovePct}%` : '';
+        const hasNote = r.note || (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || r.targetDays;
+        const targetMoveText = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '')
+          ? `🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%`
+          : '';
         const targetDaysText = r.targetDays ? `⏱️ ${r.targetDays}d` : '';
         const noteText = r.note ? `📝 ${r.note}` : '';
         const noteParts = [targetMoveText, targetDaysText, noteText].filter(Boolean).join(' • ');
