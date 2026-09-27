@@ -240,7 +240,7 @@
       margin-top: 6px;
     }
 
-    .preset-pill, .preset-pill-days {
+    .preset-pill, .preset-pill-sl, .preset-pill-days {
       font-size: 11.5px;
       padding: 3px 9px;
       background: rgba(255, 255, 255, 0.05);
@@ -264,7 +264,7 @@
       border-color: #00b894;
     }
 
-    .preset-pill.neg-pill:hover {
+    .preset-pill.neg-pill:hover, .preset-pill-sl:hover {
       background: rgba(255, 118, 117, 0.15);
       color: #ff7675;
       border-color: #ff7675;
@@ -2329,14 +2329,16 @@
       }
     }
 
-    async function setWatchlistNote(symbol, { targetMovePct, targetDays, note }) {
+    async function setWatchlistNote(symbol, { targetMovePct, slMovePct, targetDays, note }) {
       const entry = state.watchlist.find((r) => r.symbol === symbol);
       if (!entry) return;
       const prevMove = entry.targetMovePct;
+      const prevSl = entry.slMovePct;
       const prevDays = entry.targetDays;
       const prevNote = entry.note;
 
       entry.targetMovePct = targetMovePct;
+      entry.slMovePct = slMovePct;
       entry.targetDays = targetDays;
       entry.note = note || null;
       entry.updated_at = new Date().toISOString();
@@ -2346,6 +2348,7 @@
         render();
       } catch (e) {
         entry.targetMovePct = prevMove;
+        entry.slMovePct = prevSl;
         entry.targetDays = prevDays;
         entry.note = prevNote;
         alert("Couldn't save note: " + e.message);
@@ -2843,6 +2846,9 @@
           const sign = entry.targetMovePct > 0 ? '+' : '';
           parts.push(`Target: ${sign}${entry.targetMovePct}%`);
         }
+        if (entry.slMovePct !== undefined && entry.slMovePct !== null && entry.slMovePct !== '') {
+          parts.push(`SL: -${Math.abs(entry.slMovePct)}%`);
+        }
         if (entry.targetDays) parts.push(`Timeframe: ${entry.targetDays}d`);
         if (entry.note) parts.push(entry.note);
         if (parts.length) {
@@ -2986,14 +2992,15 @@
       if (!entry) return;
 
       const currentMove = entry.targetMovePct !== undefined && entry.targetMovePct !== null ? entry.targetMovePct : "";
+      const currentSl = entry.slMovePct !== undefined && entry.slMovePct !== null ? entry.slMovePct : "";
       const currentDays = entry.targetDays !== undefined && entry.targetDays !== null ? entry.targetDays : "";
       const currentNote = entry.note || "";
 
       document.getElementById("modalCard").innerHTML = `
-    <h2>Target & Note for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
+    <h2>Target, SL & Note for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
     <div class="form-grid">
       <div class="form-field">
-        <label>Expected Move (%)</label>
+        <label>Target (%)</label>
         <input type="number" step="any" id="f_noteTargetMove" placeholder="e.g. 15 for +15%, -10 for -10%" value="${currentMove}">
         <div class="preset-pill-group" style="margin-bottom: 4px;">
           <span class="preset-pill pos-pill" data-val="5">+5%</span>
@@ -3013,6 +3020,17 @@
         </div>
       </div>
       <div class="form-field">
+        <label>Stop Loss / SL (%)</label>
+        <input type="number" step="any" id="f_noteSlMove" placeholder="e.g. 5 for -5% SL" value="${currentSl}">
+        <div class="preset-pill-group">
+          <span class="preset-pill-sl" data-val="2">-2%</span>
+          <span class="preset-pill-sl" data-val="3">-3%</span>
+          <span class="preset-pill-sl" data-val="5">-5%</span>
+          <span class="preset-pill-sl" data-val="7">-7%</span>
+          <span class="preset-pill-sl" data-val="10">-10%</span>
+        </div>
+      </div>
+      <div class="form-field full">
         <label>Timeframe (Days)</label>
         <input type="number" id="f_noteTargetDays" placeholder="e.g. 7 for 7 days" value="${currentDays}">
         <div class="preset-pill-group">
@@ -3029,7 +3047,7 @@
       </div>
     </div>
     <div class="modal-actions" style="margin-top:20px;">
-      <button class="tool danger" id="removeNoteBtn" style="${(currentMove !== '' || currentDays !== '' || currentNote) ? '' : 'display:none;'}">Delete Note</button>
+      <button class="tool danger" id="removeNoteBtn" style="${(currentMove !== '' || currentSl !== '' || currentDays !== '' || currentNote) ? '' : 'display:none;'}">Delete Note</button>
       <div class="right">
         <button class="tool" id="cancelNoteBtn">Cancel</button>
         <button class="tool primary" id="saveNoteBtn">Save Note</button>
@@ -3041,10 +3059,15 @@
       document.getElementById("cancelNoteBtn").addEventListener("click", closeModal);
 
       const moveInput = document.getElementById("f_noteTargetMove");
+      const slInput = document.getElementById("f_noteSlMove");
       const daysInput = document.getElementById("f_noteTargetDays");
 
       document.querySelectorAll(".preset-pill").forEach(p => {
         p.addEventListener("click", () => { moveInput.value = p.dataset.val; });
+      });
+
+      document.querySelectorAll(".preset-pill-sl").forEach(p => {
+        p.addEventListener("click", () => { slInput.value = p.dataset.val; });
       });
 
       document.querySelectorAll(".preset-pill-days").forEach(p => {
@@ -3052,12 +3075,14 @@
       });
 
       document.getElementById("saveNoteBtn").addEventListener("click", async () => {
-        const moveVal = moveInput.value ? parseFloat(moveInput.value) : null;
+        const moveVal = moveInput.value !== "" && !isNaN(parseFloat(moveInput.value)) ? parseFloat(moveInput.value) : null;
+        const slVal = slInput.value !== "" && !isNaN(parseFloat(slInput.value)) ? parseFloat(slInput.value) : null;
         const daysVal = daysInput.value ? parseInt(daysInput.value) : null;
         const noteText = document.getElementById("f_noteText").value.trim();
 
         await setWatchlistNote(symbol, {
           targetMovePct: moveVal,
+          slMovePct: slVal,
           targetDays: daysVal,
           note: noteText
         });
@@ -3067,7 +3092,7 @@
       const removeBtn = document.getElementById("removeNoteBtn");
       if (removeBtn) {
         removeBtn.addEventListener("click", async () => {
-          await setWatchlistNote(symbol, { targetMovePct: null, targetDays: null, note: null });
+          await setWatchlistNote(symbol, { targetMovePct: null, slMovePct: null, targetDays: null, note: null });
           closeModal();
         });
       }
@@ -3257,13 +3282,16 @@
         const tvUrl = r.tv_link || tvLink(r.symbol, market);
         const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
 
-        const hasNote = r.note || (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || r.targetDays;
+        const hasNote = r.note || (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '') || r.targetDays;
         const targetMoveText = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '')
           ? `🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%`
           : '';
+        const slMoveText = (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '')
+          ? `🛑 -${Math.abs(r.slMovePct)}%`
+          : '';
         const targetDaysText = r.targetDays ? `⏱️ ${r.targetDays}d` : '';
         const noteText = r.note ? `📝 ${r.note}` : '';
-        const noteParts = [targetMoveText, targetDaysText, noteText].filter(Boolean).join(' • ');
+        const noteParts = [targetMoveText, slMoveText, targetDaysText, noteText].filter(Boolean).join(' • ');
 
         const noteBarHtml = hasNote ? `
           <div class="stock-note-bar" data-edit-note="${r.symbol}" title="Click to edit note / target">
