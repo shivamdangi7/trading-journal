@@ -2466,6 +2466,10 @@
       return Number(n).toFixed(digits);
     }
 
+    function marketCurrencySymbol(market) {
+      return market === "US" ? "$" : "₹";
+    }
+
     function fmtCurrency(n) {
       if (n === null || n === undefined || Number.isNaN(n)) return "—";
       return Number(n).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
