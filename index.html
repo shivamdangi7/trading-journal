@@ -1434,7 +1434,7 @@
     .popover-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 90;
+      z-index: 998;
       display: none;
     }
 
@@ -1443,12 +1443,12 @@
     }
 
     .action-menu {
-      position: absolute;
+      position: fixed;
       background: var(--card);
       border: 1px solid var(--border-light);
       border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      z-index: 95;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      z-index: 999;
       min-width: 190px;
       padding: 6px;
       display: none;
@@ -3611,7 +3611,13 @@
     <div class="action-menu-item danger" id="removeStockItemBtn">🗑️ Remove Symbol</div>
   `;
 
-      menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+      const menuHeight = 260;
+      let topPos = rect.bottom + 4;
+      if (topPos + menuHeight > window.innerHeight) {
+        topPos = Math.max(10, rect.top - menuHeight - 4);
+      }
+
+      menu.style.top = `${topPos}px`;
       menu.style.right = `${window.innerWidth - rect.right}px`;
       menu.style.left = 'auto';
 
