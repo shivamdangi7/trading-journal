@@ -243,6 +243,33 @@
       min-width: 0;
     }
 
+    .dual-tgt-sl-pill {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 10.5px;
+      font-weight: 700;
+      user-select: none;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dual-tgt-sl-pill .pill-part {
+      padding: 1px 7px;
+    }
+
+    .dual-tgt-sl-pill .pill-part.tgt {
+      background: rgba(0, 184, 148, 0.16);
+      color: #00b894;
+      border-right: 1px solid rgba(0, 184, 148, 0.25);
+    }
+
+    .dual-tgt-sl-pill .pill-part.sl {
+      background: rgba(255, 118, 117, 0.16);
+      color: #ff7675;
+    }
+
     .target-sub-chip {
       font-size: 10.5px;
       font-weight: 600;
@@ -3568,18 +3595,33 @@
         const tvUrl = r.tv_link || tvLink(r.symbol, market);
         const tagHtml = r.tag ? `<span class="stock-tag-badge" data-edit-tag="${r.symbol}" title="Click to edit tag">${r.tag}</span>` : `<button class="add-tag-pill" data-edit-tag="${r.symbol}">+ Tag</button>`;
 
-        const hasChips = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '') || r.targetDays;
+        const hasTarget = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '');
+        const hasSl = (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '');
+        const hasChips = hasTarget || hasSl || r.targetDays;
         const hasNote = r.note || hasChips;
-        const targetMoveText = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '')
-          ? `<span class="target-sub-chip target">🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%</span>`
-          : '';
-        const slMoveText = (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '')
-          ? `<span class="target-sub-chip sl">🛑 -${Math.abs(r.slMovePct)}%</span>`
-          : '';
-        const targetDaysText = r.targetDays ? `<span class="target-sub-chip days">⏱️ ${r.targetDays}d</span>` : '';
+
+        let dualPillHtml = '';
+        if (hasTarget && hasSl) {
+          const tgtVal = `${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%`;
+          const slVal = `-${Math.abs(r.slMovePct)}%`;
+          dualPillHtml = `
+            <span class="dual-tgt-sl-pill" title="Target: ${tgtVal}, Stop Loss: ${slVal}">
+              <span class="pill-part tgt">${tgtVal}</span>
+              <span class="pill-part sl">${slVal}</span>
+            </span>
+          `;
+        } else if (hasTarget) {
+          const tgtVal = `${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%`;
+          dualPillHtml = `<span class="target-sub-chip target" title="Target: ${tgtVal}">${tgtVal}</span>`;
+        } else if (hasSl) {
+          const slVal = `-${Math.abs(r.slMovePct)}%`;
+          dualPillHtml = `<span class="target-sub-chip sl" title="Stop Loss: ${slVal}">${slVal}</span>`;
+        }
+
+        const targetDaysText = r.targetDays ? `<span class="target-sub-chip days" title="Timeframe: ${r.targetDays} days">⏱️ ${r.targetDays}d</span>` : '';
         const noteText = r.note ? `<div class="target-sub-note-row" title="${r.note}">📝 ${r.note}</div>` : '';
         
-        const chipsRowHtml = hasChips ? `<div class="target-sub-chips-row">${targetMoveText}${slMoveText}${targetDaysText}</div>` : '';
+        const chipsRowHtml = hasChips ? `<div class="target-sub-chips-row">${dualPillHtml}${targetDaysText}</div>` : '';
 
         const targetSublineHtml = hasNote ? `
           <div class="stock-target-subline" data-edit-note="${r.symbol}" title="Click to edit note / targets">
