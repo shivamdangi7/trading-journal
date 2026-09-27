@@ -269,6 +269,16 @@
       color: var(--text);
     }
 
+    .dual-input-row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 6px;
+    }
+
+    .dual-input-row input {
+      min-width: 0;
+    }
+
     .preset-pill-group {
       display: flex;
       flex-wrap: wrap;
@@ -2365,16 +2375,20 @@
       }
     }
 
-    async function setWatchlistNote(symbol, { targetMovePct, slMovePct, targetDays, note }) {
+    async function setWatchlistNote(symbol, { targetMovePct, targetPrice, slMovePct, slPrice, targetDays, note }) {
       const entry = state.watchlist.find((r) => r.symbol === symbol);
       if (!entry) return;
       const prevMove = entry.targetMovePct;
+      const prevTargetPrice = entry.targetPrice;
       const prevSl = entry.slMovePct;
+      const prevSlPrice = entry.slPrice;
       const prevDays = entry.targetDays;
       const prevNote = entry.note;
 
       entry.targetMovePct = targetMovePct;
+      entry.targetPrice = targetPrice;
       entry.slMovePct = slMovePct;
+      entry.slPrice = slPrice;
       entry.targetDays = targetDays;
       entry.note = note || null;
       entry.updated_at = new Date().toISOString();
@@ -2384,7 +2398,9 @@
         render();
       } catch (e) {
         entry.targetMovePct = prevMove;
+        entry.targetPrice = prevTargetPrice;
         entry.slMovePct = prevSl;
+        entry.slPrice = prevSlPrice;
         entry.targetDays = prevDays;
         entry.note = prevNote;
         alert("Couldn't save note: " + e.message);
@@ -2880,10 +2896,12 @@
         const parts = [];
         if (entry.targetMovePct !== undefined && entry.targetMovePct !== null && entry.targetMovePct !== '') {
           const sign = entry.targetMovePct > 0 ? '+' : '';
-          parts.push(`Target: ${sign}${entry.targetMovePct}%`);
+          const priceExtra = entry.targetPrice ? ` (${fmtCurrency(entry.targetPrice)})` : '';
+          parts.push(`Target: ${sign}${entry.targetMovePct}%${priceExtra}`);
         }
         if (entry.slMovePct !== undefined && entry.slMovePct !== null && entry.slMovePct !== '') {
-          parts.push(`SL: -${Math.abs(entry.slMovePct)}%`);
+          const priceExtra = entry.slPrice ? ` (${fmtCurrency(entry.slPrice)})` : '';
+          parts.push(`SL: -${Math.abs(entry.slMovePct)}%${priceExtra}`);
         }
         if (entry.targetDays) parts.push(`Timeframe: ${entry.targetDays}d`);
         if (entry.note) parts.push(entry.note);
@@ -3027,17 +3045,32 @@
       const entry = state.watchlist.find((r) => r.symbol === symbol);
       if (!entry) return;
 
+      const ltp = entry.ltp || null;
       const currentMove = entry.targetMovePct !== undefined && entry.targetMovePct !== null ? entry.targetMovePct : "";
+      let initialTargetPrice = entry.targetPrice !== undefined && entry.targetPrice !== null ? entry.targetPrice : "";
+      if (initialTargetPrice === "" && currentMove !== "" && ltp) {
+        initialTargetPrice = parseFloat((ltp * (1 + currentMove / 100)).toFixed(2));
+      }
+
       const currentSl = entry.slMovePct !== undefined && entry.slMovePct !== null ? entry.slMovePct : "";
+      let initialSlPrice = entry.slPrice !== undefined && entry.slPrice !== null ? entry.slPrice : "";
+      if (initialSlPrice === "" && currentSl !== "" && ltp) {
+        initialSlPrice = parseFloat((ltp * (1 - Math.abs(currentSl) / 100)).toFixed(2));
+      }
+
       const currentDays = entry.targetDays !== undefined && entry.targetDays !== null ? entry.targetDays : "";
       const currentNote = entry.note || "";
 
       document.getElementById("modalCard").innerHTML = `
     <h2>Target, SL & Note for ${symbol} <span class="close-x" id="modalCloseX">&times;</span></h2>
+    ${ltp ? `<div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">LTP: <b style="color:var(--text);">${fmtCurrency(ltp)}</b></div>` : ''}
     <div class="form-grid">
       <div class="form-field">
-        <label>Target (%)</label>
-        <input type="number" step="any" id="f_noteTargetMove" placeholder="e.g. 15 for +15%" value="${currentMove}">
+        <label>Target</label>
+        <div class="dual-input-row">
+          <input type="number" step="any" id="f_noteTargetMove" placeholder="%" value="${currentMove}">
+          <input type="number" step="any" id="f_noteTargetPrice" placeholder="Price (${marketCurrencySymbol(entry.market)})" value="${initialTargetPrice}">
+        </div>
         <div class="preset-pill-group">
           <span class="preset-pill pos-pill" data-val="5">+5%</span>
           <span class="preset-pill pos-pill" data-val="10">+10%</span>
@@ -3048,8 +3081,11 @@
         </div>
       </div>
       <div class="form-field">
-        <label>Stop Loss / SL (%)</label>
-        <input type="number" step="any" id="f_noteSlMove" placeholder="e.g. 5 for -5% SL" value="${currentSl}">
+        <label>Stop Loss (SL)</label>
+        <div class="dual-input-row">
+          <input type="number" step="any" id="f_noteSlMove" placeholder="SL %" value="${currentSl}">
+          <input type="number" step="any" id="f_noteSlPrice" placeholder="Price (${marketCurrencySymbol(entry.market)})" value="${initialSlPrice}">
+        </div>
         <div class="preset-pill-group">
           <span class="preset-pill-sl" data-val="2">-2%</span>
           <span class="preset-pill-sl" data-val="3">-3%</span>
@@ -3087,15 +3123,68 @@
       document.getElementById("cancelNoteBtn").addEventListener("click", closeModal);
 
       const moveInput = document.getElementById("f_noteTargetMove");
+      const targetPriceInput = document.getElementById("f_noteTargetPrice");
       const slInput = document.getElementById("f_noteSlMove");
+      const slPriceInput = document.getElementById("f_noteSlPrice");
       const daysInput = document.getElementById("f_noteTargetDays");
 
+      // Bi-directional sync: Target % <-> Target Price
+      const syncTargetFromPct = () => {
+        const pctVal = parseFloat(moveInput.value);
+        if (!isNaN(pctVal) && ltp) {
+          targetPriceInput.value = parseFloat((ltp * (1 + pctVal / 100)).toFixed(2));
+        } else if (moveInput.value === "") {
+          targetPriceInput.value = "";
+        }
+      };
+
+      const syncTargetFromPrice = () => {
+        const priceVal = parseFloat(targetPriceInput.value);
+        if (!isNaN(priceVal) && ltp && ltp > 0) {
+          const diffPct = ((priceVal - ltp) / ltp) * 100;
+          moveInput.value = parseFloat(diffPct.toFixed(2));
+        } else if (targetPriceInput.value === "") {
+          moveInput.value = "";
+        }
+      };
+
+      // Bi-directional sync: SL % <-> SL Price
+      const syncSlFromPct = () => {
+        const pctVal = parseFloat(slInput.value);
+        if (!isNaN(pctVal) && ltp) {
+          slPriceInput.value = parseFloat((ltp * (1 - Math.abs(pctVal) / 100)).toFixed(2));
+        } else if (slInput.value === "") {
+          slPriceInput.value = "";
+        }
+      };
+
+      const syncSlFromPrice = () => {
+        const priceVal = parseFloat(slPriceInput.value);
+        if (!isNaN(priceVal) && ltp && ltp > 0) {
+          const diffPct = ((ltp - priceVal) / ltp) * 100;
+          slInput.value = parseFloat(diffPct.toFixed(2));
+        } else if (slPriceInput.value === "") {
+          slInput.value = "";
+        }
+      };
+
+      moveInput.addEventListener("input", syncTargetFromPct);
+      targetPriceInput.addEventListener("input", syncTargetFromPrice);
+      slInput.addEventListener("input", syncSlFromPct);
+      slPriceInput.addEventListener("input", syncSlFromPrice);
+
       document.querySelectorAll(".preset-pill").forEach(p => {
-        p.addEventListener("click", () => { moveInput.value = p.dataset.val; });
+        p.addEventListener("click", () => {
+          moveInput.value = p.dataset.val;
+          syncTargetFromPct();
+        });
       });
 
       document.querySelectorAll(".preset-pill-sl").forEach(p => {
-        p.addEventListener("click", () => { slInput.value = p.dataset.val; });
+        p.addEventListener("click", () => {
+          slInput.value = p.dataset.val;
+          syncSlFromPct();
+        });
       });
 
       document.querySelectorAll(".preset-pill-days").forEach(p => {
@@ -3104,13 +3193,17 @@
 
       document.getElementById("saveNoteBtn").addEventListener("click", async () => {
         const moveVal = moveInput.value !== "" && !isNaN(parseFloat(moveInput.value)) ? parseFloat(moveInput.value) : null;
+        const targetPriceVal = targetPriceInput.value !== "" && !isNaN(parseFloat(targetPriceInput.value)) ? parseFloat(targetPriceInput.value) : null;
         const slVal = slInput.value !== "" && !isNaN(parseFloat(slInput.value)) ? parseFloat(slInput.value) : null;
+        const slPriceVal = slPriceInput.value !== "" && !isNaN(parseFloat(slPriceInput.value)) ? parseFloat(slPriceInput.value) : null;
         const daysVal = daysInput.value ? parseInt(daysInput.value) : null;
         const noteText = document.getElementById("f_noteText").value.trim();
 
         await setWatchlistNote(symbol, {
           targetMovePct: moveVal,
+          targetPrice: targetPriceVal,
           slMovePct: slVal,
+          slPrice: slPriceVal,
           targetDays: daysVal,
           note: noteText
         });
@@ -3120,7 +3213,7 @@
       const removeBtn = document.getElementById("removeNoteBtn");
       if (removeBtn) {
         removeBtn.addEventListener("click", async () => {
-          await setWatchlistNote(symbol, { targetMovePct: null, slMovePct: null, targetDays: null, note: null });
+          await setWatchlistNote(symbol, { targetMovePct: null, targetPrice: null, slMovePct: null, slPrice: null, targetDays: null, note: null });
           closeModal();
         });
       }
