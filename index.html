@@ -161,6 +161,51 @@
       border-color: var(--purple, #6c5ce7);
     }
 
+    /* Compact Watchlist-Only Mode for Floating / Mobile Windows */
+    body.compact-mode header .brand-group {
+      display: none !important;
+    }
+
+    body.compact-mode header .segmented-bar {
+      display: none !important;
+    }
+
+    body.compact-mode .bottom-nav {
+      display: none !important;
+    }
+
+    body.compact-mode header {
+      padding: 4px 6px;
+      margin-bottom: 2px;
+      background: transparent;
+      border: none;
+    }
+
+    body.compact-mode header .header-top {
+      justify-content: flex-end;
+      margin-bottom: 0;
+    }
+
+    body.compact-mode main {
+      padding: 4px 6px;
+      max-width: 100%;
+    }
+
+    body.compact-mode .wl-summary-bar {
+      margin-bottom: 6px;
+      padding: 4px 8px;
+    }
+
+    body.compact-mode .wl-filter-row {
+      margin-bottom: 6px;
+    }
+
+    body.compact-mode #compactModeBtn {
+      background: var(--purple-bg);
+      color: var(--purple);
+      border: 1px solid var(--purple-glow);
+    }
+
     /* Tab Segment Bar */
     .segmented-bar {
       display: flex;
@@ -1645,6 +1690,11 @@
           <button class="market-switch-btn" id="marketSwitchBtn" title="Switch Market (IN / USA)">
             <span id="marketSwitchText">${state.marketFilter === 'US' ? '🇺🇸 USA' : '🇮🇳 IN'}</span>
           </button>
+          <button class="icon-btn" id="compactModeBtn" title="Watchlist-Only Compact View">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </button>
           <button class="icon-btn" id="moreOptionsBtn" title="Account / Settings">
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="12" cy="5" r="1.5"></circle>
@@ -1755,8 +1805,28 @@
       tagFilter: "all", // "all", "untagged", or specific tag name
       limit: 12,
       fetchingPrices: false,
-      fetchStatusText: ""
+      fetchStatusText: "",
+      compactMode: localStorage.getItem("trading_journal_compact_mode") === "true"
     };
+
+    function applyCompactMode() {
+      const isCompact = state.compactMode;
+      document.body.classList.toggle("compact-mode", isCompact);
+
+      const btn = document.getElementById("compactModeBtn");
+      if (btn) {
+        btn.title = isCompact ? "Exit Compact Watchlist View" : "Watchlist-Only Compact View";
+        btn.innerHTML = isCompact ? `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
+          </svg>
+        ` : `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+        `;
+      }
+    }
 
     function getToken() { return localStorage.getItem(TOKEN_KEY); }
     function getGistId() { return localStorage.getItem(GIST_ID_KEY); }
@@ -3446,6 +3516,16 @@
       render();
     });
 
+    document.getElementById("compactModeBtn").addEventListener("click", () => {
+      state.compactMode = !state.compactMode;
+      localStorage.setItem("trading_journal_compact_mode", state.compactMode);
+      if (state.compactMode && state.page !== "watchlist") {
+        state.page = "watchlist";
+        render();
+      }
+      applyCompactMode();
+    });
+
     document.getElementById("modalBackdrop").addEventListener("click", (e) => {
       if (e.target.id === "modalBackdrop") closeModal();
     });
@@ -3469,6 +3549,7 @@
       await loadTrades();
       document.getElementById("setupScreen").style.display = "none";
       document.getElementById("app").style.display = "";
+      applyCompactMode();
       render();
       loadWatchlist().then(() => {
         render();
