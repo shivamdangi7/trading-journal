@@ -210,26 +210,62 @@
       display: none !important;
     }
 
-    /* Stock Note & Target Preview Styles */
-    .stock-note-bar {
-      margin-top: 6px;
-      padding: 5px 10px;
-      background: rgba(108, 92, 231, 0.08);
-      border: 1px solid rgba(108, 92, 231, 0.2);
-      border-radius: 8px;
-      font-size: 11.5px;
-      color: var(--text-dim);
+    /* Stock Note & Target Preview Styles (Compact Subline directly under symbol) */
+    .stock-symbol-row {
       display: flex;
       align-items: center;
       gap: 6px;
-      cursor: pointer;
-      transition: all 0.15s ease;
-      word-break: break-word;
     }
 
-    .stock-note-bar:hover {
-      background: rgba(108, 92, 231, 0.18);
-      border-color: var(--purple);
+    .stock-target-subline {
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      cursor: pointer;
+      line-height: 1.2;
+    }
+
+    .target-sub-chip {
+      font-size: 10.5px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 6px;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .target-sub-chip.target {
+      background: rgba(0, 184, 148, 0.12);
+      color: #00b894;
+      border: 1px solid rgba(0, 184, 148, 0.25);
+    }
+
+    .target-sub-chip.sl {
+      background: rgba(255, 118, 117, 0.12);
+      color: #ff7675;
+      border: 1px solid rgba(255, 118, 117, 0.25);
+    }
+
+    .target-sub-chip.days {
+      background: rgba(108, 92, 231, 0.12);
+      color: var(--purple-glow, #a29bfe);
+      border: 1px solid rgba(108, 92, 231, 0.25);
+    }
+
+    .target-sub-note {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 260px;
+    }
+
+    .stock-target-subline:hover .target-sub-note {
       color: var(--text);
     }
 
@@ -3276,18 +3312,16 @@
 
         const hasNote = r.note || (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '') || (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '') || r.targetDays;
         const targetMoveText = (r.targetMovePct !== undefined && r.targetMovePct !== null && r.targetMovePct !== '')
-          ? `🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%`
+          ? `<span class="target-sub-chip target">🎯 ${r.targetMovePct > 0 ? '+' : ''}${r.targetMovePct}%</span>`
           : '';
         const slMoveText = (r.slMovePct !== undefined && r.slMovePct !== null && r.slMovePct !== '')
-          ? `🛑 -${Math.abs(r.slMovePct)}%`
+          ? `<span class="target-sub-chip sl">🛑 -${Math.abs(r.slMovePct)}%</span>`
           : '';
-        const targetDaysText = r.targetDays ? `⏱️ ${r.targetDays}d` : '';
-        const noteText = r.note ? `📝 ${r.note}` : '';
-        const noteParts = [targetMoveText, slMoveText, targetDaysText, noteText].filter(Boolean).join(' • ');
-
-        const noteBarHtml = hasNote ? `
-          <div class="stock-note-bar" data-edit-note="${r.symbol}" title="Click to edit note / target">
-            <span>${noteParts}</span>
+        const targetDaysText = r.targetDays ? `<span class="target-sub-chip days">⏱️ ${r.targetDays}d</span>` : '';
+        const noteText = r.note ? `<span class="target-sub-note" title="${r.note}">📝 ${r.note}</span>` : '';
+        const targetSublineHtml = hasNote ? `
+          <div class="stock-target-subline" data-edit-note="${r.symbol}" title="Click to edit note / targets">
+            ${targetMoveText}${slMoveText}${targetDaysText}${noteText}
           </div>
         ` : '';
 
@@ -3297,8 +3331,11 @@
             
             <div class="stock-row-top">
               <div class="stock-info">
-                <a href="${tvUrl}" target="_blank" rel="noopener" class="stock-symbol" title="View ${r.symbol} on TradingView">${r.symbol}</a>
-                <span class="stock-market">${market}</span>
+                <div class="stock-symbol-row">
+                  <a href="${tvUrl}" target="_blank" rel="noopener" class="stock-symbol" title="View ${r.symbol} on TradingView">${r.symbol}</a>
+                  <span class="stock-market">${market}</span>
+                </div>
+                ${targetSublineHtml}
               </div>
               <div class="stock-price-col">
                 <span class="stock-price">${fmtCurrency(r.ltp)}</span>
@@ -3325,7 +3362,6 @@
                 </button>
               </div>
             </div>
-            ${noteBarHtml}
           </div>
         `;
       }).join('') : `<div id="emptyStub">No matching stocks found in this view.</div>`}
