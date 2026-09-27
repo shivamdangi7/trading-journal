@@ -1706,13 +1706,12 @@
         font-size: 11px;
       }
 
-      /* Single Line Stock Item Row (Zero Overlap, Truncates Gracefully) */
       .stock-item {
         display: grid;
         grid-template-columns: minmax(0, 1.8fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
         align-items: center;
         gap: 4px;
-        padding: 10px 8px 10px 10px;
+        padding: 6px 8px 6px 10px;
         border-radius: 10px;
       }
 
@@ -1726,6 +1725,9 @@
         min-width: 0;
         overflow: hidden;
         padding-left: 2px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .stock-symbol {
@@ -1739,6 +1741,31 @@
 
       .stock-market {
         font-size: 9.5px;
+      }
+
+      .stock-target-subline {
+        margin-top: 1px;
+        gap: 2px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+      }
+
+      .target-sub-chip {
+        font-size: 9px;
+        padding: 0px 4px;
+        border-radius: 4px;
+        height: 16px;
+        line-height: 16px;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .target-sub-note {
+        font-size: 9.5px;
+        max-width: 140px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .stock-price-col {
