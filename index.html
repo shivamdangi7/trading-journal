@@ -3086,12 +3086,6 @@
                 </div>
               </div>
               <div class="stock-actions">
-                <a href="${tvUrl}" target="_blank" rel="noopener" class="action-icon-btn" title="View Chart">
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
-                </a>
-                <button class="action-icon-btn add-trade-btn" data-log-symbol="${r.symbol}" title="Log Trade">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                </button>
                 <button class="action-icon-btn item-menu-btn" data-menu-symbol="${r.symbol}" title="Options">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="12" cy="19" r="1.5"></circle></svg>
                 </button>
@@ -3224,6 +3218,7 @@
     <div style="font-weight:700; padding:6px 12px 8px; font-size:12px; color:var(--text-dim); border-bottom:1px solid var(--border); margin-bottom:4px;">
       ${symbol} Options
     </div>
+    <div class="action-menu-item" id="logTradeMenuItemBtn">➕ Log Trade in Journal</div>
     <div class="action-menu-item" id="editTagMenuItemBtn">🏷️ Edit / Assign Tag</div>
     <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
     <div style="font-weight:700; padding:4px 12px; font-size:11px; color:var(--text-muted);">Priority</div>
@@ -3248,6 +3243,11 @@
       };
 
       backdrop.onclick = close;
+
+      document.getElementById("logTradeMenuItemBtn").addEventListener("click", () => {
+        close();
+        logTradeFromWatchlist(symbol);
+      });
 
       document.getElementById("editTagMenuItemBtn").addEventListener("click", () => {
         close();
