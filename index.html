@@ -286,7 +286,9 @@
       margin-top: 6px;
     }
 
-    .preset-pill, .preset-pill-sl, .preset-pill-days {
+    .preset-pill,
+    .preset-pill-sl,
+    .preset-pill-days {
       font-size: 11.5px;
       padding: 3px 9px;
       background: rgba(255, 255, 255, 0.05);
@@ -298,7 +300,8 @@
       transition: all 0.15s ease;
     }
 
-    .preset-pill:hover, .preset-pill-days:hover {
+    .preset-pill:hover,
+    .preset-pill-days:hover {
       background: var(--purple-bg);
       color: var(--purple);
       border-color: var(--purple);
@@ -310,7 +313,8 @@
       border-color: #00b894;
     }
 
-    .preset-pill.neg-pill:hover, .preset-pill-sl:hover {
+    .preset-pill.neg-pill:hover,
+    .preset-pill-sl:hover {
       background: rgba(255, 118, 117, 0.15);
       color: #ff7675;
       border-color: #ff7675;
@@ -1897,7 +1901,8 @@
           </button>
           <button class="icon-btn" id="compactModeBtn" title="Watchlist-Only Compact View">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+              </path>
             </svg>
           </button>
           <button class="icon-btn" id="moreOptionsBtn" title="Account / Settings">
@@ -2662,7 +2667,7 @@
         return {
           index: idx,
           symbol: t.symbol,
-          date: t.exitDate || t.date || `Trade #${idx+1}`,
+          date: t.exitDate || t.date || `Trade #${idx + 1}`,
           plPct: t.plPct || 0,
           cumPnL: runningPnL
         };
@@ -2752,7 +2757,7 @@
 
       const tagsList = Object.values(tagStats).map(st => {
         const winRate = st.total ? (st.wins / st.total) * 100 : 0;
-        const avgRR = st.rMultiples.length ? st.rMultiples.reduce((a,b) => a+b, 0) / st.rMultiples.length : null;
+        const avgRR = st.rMultiples.length ? st.rMultiples.reduce((a, b) => a + b, 0) / st.rMultiples.length : null;
         return { ...st, winRate, avgRR };
       }).sort((a, b) => b.totalPnL - a.totalPnL);
 
@@ -2762,10 +2767,10 @@
       return `
         <div class="tag-analytics-grid">
           ${tagsList.map(t => {
-            const isTopWin = topWinRateTag && topWinRateTag.tag === t.tag && t.total >= 2;
-            const isTopPnL = topPnLTag && topPnLTag.tag === t.tag && t.totalPnL > 0;
-            const badge = isTopPnL ? '🚀 Top PnL' : (isTopWin ? '🏆 Best Win Rate' : '');
-            return `
+        const isTopWin = topWinRateTag && topWinRateTag.tag === t.tag && t.total >= 2;
+        const isTopPnL = topPnLTag && topPnLTag.tag === t.tag && t.totalPnL > 0;
+        const badge = isTopPnL ? '🚀 Top PnL' : (isTopWin ? '🏆 Best Win Rate' : '');
+        return `
               <div class="tag-card">
                 <div class="tag-header">
                   <span class="tag-name">
@@ -2787,7 +2792,7 @@
                 </div>
               </div>
             `;
-          }).join("")}
+      }).join("")}
         </div>
       `;
     }
@@ -2814,16 +2819,16 @@
         <!-- KPI Summary Grid -->
         <div class="stat-grid" style="grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); margin-bottom:20px;">
           ${[
-            tile("Total Trades", state.trades.length),
-            tile("Open Trades", s.open),
-            tile("Closed Trades", s.closed),
-            tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, (s.winRate || 0) >= 50 ? "pos" : "neg"),
-            tile("Profit Factor", s.profitFactor !== null ? fmt(s.profitFactor, 2) : null, (s.profitFactor || 0) >= 1.2 ? "pos" : "neg"),
-            tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, (s.avgRR || 0) >= 0 ? "pos" : "neg"),
-            tile("Net PnL %", s.totalPnL !== null ? (s.totalPnL > 0 ? "+" : "") + fmt(s.totalPnL, 2) + "%" : null, (s.totalPnL || 0) >= 0 ? "pos" : "neg"),
-            tile("Best Trade", s.bestTrade !== null ? "+" + fmt(s.bestTrade, 1) + "%" : null, "pos"),
-            tile("Worst Trade", s.worstTrade !== null ? fmt(s.worstTrade, 1) + "%" : null, "neg"),
-          ].join("")}
+          tile("Total Trades", state.trades.length),
+          tile("Open Trades", s.open),
+          tile("Closed Trades", s.closed),
+          tile("Win Rate", s.winRate !== null ? fmt(s.winRate, 1) + "%" : null, (s.winRate || 0) >= 50 ? "pos" : "neg"),
+          tile("Profit Factor", s.profitFactor !== null ? fmt(s.profitFactor, 2) : null, (s.profitFactor || 0) >= 1.2 ? "pos" : "neg"),
+          tile("Avg R:R", s.avgRR !== null ? fmt(s.avgRR, 2) + "R" : null, (s.avgRR || 0) >= 0 ? "pos" : "neg"),
+          tile("Net PnL %", s.totalPnL !== null ? (s.totalPnL > 0 ? "+" : "") + fmt(s.totalPnL, 2) + "%" : null, (s.totalPnL || 0) >= 0 ? "pos" : "neg"),
+          tile("Best Trade", s.bestTrade !== null ? "+" + fmt(s.bestTrade, 1) + "%" : null, "pos"),
+          tile("Worst Trade", s.worstTrade !== null ? fmt(s.worstTrade, 1) + "%" : null, "neg"),
+        ].join("")}
         </div>
 
         <!-- Cumulative PnL Curve Chart -->
@@ -2989,7 +2994,7 @@
       openModal(null);
       document.getElementById("f_symbol").value = symbol;
       document.getElementById("f_date").value = new Date().toISOString().slice(0, 10);
-      
+
       const entry = state.watchlist.find(w => w.symbol === symbol);
       if (entry) {
         const parts = [];
