@@ -2107,104 +2107,35 @@
       return s;
     }
 
-    // Blazing fast batch stock price fetcher using CORS-friendly scanner APIs with Yahoo fallback
-    async function fetchBatchPricesFromAPI(stocks) {
-      const result = {};
-      if (!stocks || !stocks.length) return result;
+    let eodQuotesCache = null;
+    let eodQuotesCacheTime = 0;
 
-      const tickers = [];
-      const names = [];
-
-      stocks.forEach(s => {
-        const norm = normalizeStockSymbol(s.symbol);
-        const aliases = PRICE_ALIASES[norm] || [norm];
-        aliases.forEach(a => {
-          names.push(a);
-          const cleanTv = a.replace(/&/g, "_").replace(/-/g, "_");
-          if (s.market === "US") {
-            tickers.push(`NASDAQ:${cleanTv}`, `NYSE:${cleanTv}`, `AMEX:${cleanTv}`);
-          } else {
-            tickers.push(`NSE:${cleanTv}`, `BSE:${cleanTv}`);
-          }
-        });
-      });
-
-      const postJson = async (url, data) => {
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4000);
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
-            signal: controller.signal
-          });
-          clearTimeout(timer);
-          if (res.ok) return await res.json();
-        } catch (e) { }
-        return null;
-      };
-
-      const [tResGlobal, tResIndia, nResGlobal, nResIndia] = await Promise.all([
-        postJson("https://scanner.tradingview.com/global/scan", { symbols: { tickers }, columns: ["close", "change"] }),
-        postJson("https://scanner.tradingview.com/india/scan", { symbols: { tickers }, columns: ["close", "change"] }),
-        postJson("https://scanner.tradingview.com/global/scan", { filter: [{ left: "name", operation: "in_range", right: names }], columns: ["name", "close", "change"] }),
-        postJson("https://scanner.tradingview.com/india/scan", { filter: [{ left: "name", operation: "in_range", right: names }], columns: ["name", "close", "change"] })
-      ]);
-
-      function record(symName, ltp, pct, ticker = "") {
-        if (ltp === null || ltp === undefined) return;
-        const cleanFound = symName.toUpperCase().replace(/_/g, "&");
-        for (const s of stocks) {
-          const targetNorm = normalizeStockSymbol(s.symbol);
-          const rawTarget = s.symbol.trim().toUpperCase();
-          const aliases = (PRICE_ALIASES[targetNorm] || [targetNorm]).map(x => x.replace(/_/g, "&"));
-          if (aliases.includes(cleanFound) || cleanFound === targetNorm || cleanFound === rawTarget) {
-            const isPref = ticker.startsWith("NSE:") || ticker.startsWith("NASDAQ:") || ticker.startsWith("NYSE:");
-            if (!result[rawTarget] || isPref) {
-              result[rawTarget] = { ltp: Number(ltp), pct_change: Number(pct || 0) };
-            }
-          }
-        }
-      }
-
-      [tResGlobal, tResIndia].forEach(res => {
-        if (res?.data) {
-          res.data.forEach(row => {
-            const parts = row.s.split(":");
-            record(parts[1], row.d[0], row.d[1], row.s);
-          });
-        }
-      });
-
-      [nResGlobal, nResIndia].forEach(res => {
-        if (res?.data) {
-          res.data.forEach(row => {
-            record(row.d[0], row.d[1], row.d[2], row.s);
-          });
-        }
-      });
-
-      return result;
-    }
-
-    let csvQuotesCache = null;
-    let csvQuotesCacheTime = 0;
-
-    // Daily quotes CSV fallback fetcher for Indian market (updates daily after market closes)
-    async function fetchDailyQuotesCSV() {
+    // Fetch and parse the official EOD daily quotes CSV for Indian market
+    async function fetchDailyQuotesCSV(force = false) {
       const now = Date.now();
-      // Cache parsed CSV in memory for 5 minutes
-      if (csvQuotesCache && (now - csvQuotesCacheTime) < 300000) {
-        return csvQuotesCache;
+      // Cache parsed quotes in memory for 30 minutes unless forced
+      if (!force && eodQuotesCache && (now - eodQuotesCacheTime) < 1800000) {
+        return eodQuotesCache;
       }
       try {
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 6000);
-        const res = await fetch("https://storage.googleapis.com/watchlist-pro-35adf.firebasestorage.app/daily-quotes/prices.csv.gz", { signal: controller.signal });
+        const timer = setTimeout(() => controller.abort(), 10000);
+        const url = "https://storage.googleapis.com/watchlist-pro-35adf.firebasestorage.app/daily-quotes/prices.csv.gz";
+        const res = await fetch(url, { signal: controller.signal, cache: force ? "reload" : "default" });
         clearTimeout(timer);
-        if (!res.ok) return csvQuotesCache || {};
-        const text = await res.text();
+        if (!res.ok) return eodQuotesCache || {};
+
+        let text = "";
+        const blob = await res.blob();
+        const buffer = await blob.slice(0, 2).arrayBuffer();
+        const header = new Uint8Array(buffer);
+        if (header[0] === 0x1f && header[1] === 0x8b && typeof DecompressionStream !== "undefined") {
+          const stream = blob.stream().pipeThrough(new DecompressionStream("gzip"));
+          text = await new Response(stream).text();
+        } else {
+          text = await blob.text();
+        }
+
         const lines = text.split("\n");
         const resultMap = {};
 
@@ -2214,161 +2145,92 @@
           const parts = line.split(",");
           if (parts.length < 4) continue;
           // exchange, symbol, close, prev
+          const exchange = parts[0].trim().toUpperCase();
           const sym = parts[1].trim().toUpperCase();
           const close = parseFloat(parts[2]);
           const prev = parseFloat(parts[3]);
           if (!isNaN(close)) {
             const pct = (!isNaN(prev) && prev > 0) ? ((close - prev) / prev) * 100 : 0;
             const norm = normalizeStockSymbol(sym);
-            const dataObj = { ltp: close, pct_change: pct };
+            const dataObj = { ltp: close, pct_change: pct, prev, exchange };
             resultMap[sym] = dataObj;
-            resultMap[norm] = dataObj;
+            resultMap[`${exchange}:${sym}`] = dataObj;
+            if (!resultMap[norm]) resultMap[norm] = dataObj;
             const aliases = PRICE_ALIASES[norm] || [];
-            aliases.forEach(a => { resultMap[a] = dataObj; });
+            aliases.forEach(a => {
+              const cleanA = a.toUpperCase();
+              if (!resultMap[cleanA]) resultMap[cleanA] = dataObj;
+            });
           }
         }
-        csvQuotesCache = resultMap;
-        csvQuotesCacheTime = now;
+        eodQuotesCache = resultMap;
+        eodQuotesCacheTime = now;
         return resultMap;
       } catch (e) {
-        console.warn("CSV daily quotes fallback fetch failed:", e);
-        return csvQuotesCache || {};
+        console.warn("EOD daily quotes fetch failed:", e);
+        return eodQuotesCache || {};
       }
     }
 
-    // Fast stock price fetcher with daily CSV fallback for Indian stocks & Yahoo Finance for US
-    async function fetchYahooPrice(symbol, market = "IN") {
-      const symRaw = symbol.trim().toUpperCase();
-      const norm = normalizeStockSymbol(symRaw);
-
-      const batchRes = await fetchBatchPricesFromAPI([{ symbol: symRaw, market }]);
-      if (batchRes[symRaw]) return batchRes[symRaw];
-
-      if (market !== "US") {
-        const csvMap = await fetchDailyQuotesCSV();
-        const found = csvMap[symRaw] || csvMap[norm];
-        if (found) return found;
-      }
-
-      // Direct Yahoo Finance ticker candidates
-      const variants = PRICE_ALIASES[norm] || [norm];
-      const yahooTickers = [];
-      variants.forEach(v => {
-        if (market === "US") {
-          yahooTickers.push(v);
-        } else {
-          yahooTickers.push(`${v}.NS`, `${v}.BO`, v);
-        }
-      });
-
-      for (const ticker of yahooTickers) {
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 2000);
-          const res = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`, { signal: controller.signal });
-          clearTimeout(timer);
-          if (!res.ok) continue;
-          const data = await res.json();
-          const meta = data?.chart?.result?.[0]?.meta;
-          if (meta && (meta.regularMarketPrice !== undefined || meta.chartPreviousClose !== undefined)) {
-            const ltp = meta.regularMarketPrice ?? meta.chartPreviousClose;
-            const prevClose = meta.chartPreviousClose || meta.previousClose || ltp;
-            const pct_change = meta.regularMarketChangePercent !== undefined && meta.regularMarketChangePercent !== null
-              ? meta.regularMarketChangePercent
-              : (prevClose ? ((ltp - prevClose) / prevClose) * 100 : 0);
-            return { ltp: Number(ltp), pct_change: Number(pct_change) };
-          }
-        } catch (e) { }
+    // Lookup EOD quote for any symbol variant or alias
+    function findEodQuote(symbol, quotesMap) {
+      if (!symbol || !quotesMap) return null;
+      const raw = symbol.trim().toUpperCase();
+      const norm = normalizeStockSymbol(raw);
+      if (quotesMap[raw]) return quotesMap[raw];
+      if (quotesMap[norm]) return quotesMap[norm];
+      if (quotesMap[`NSE:${norm}`]) return quotesMap[`NSE:${norm}`];
+      if (quotesMap[`BSE:${norm}`]) return quotesMap[`BSE:${norm}`];
+      const aliases = PRICE_ALIASES[norm] || [];
+      for (const a of aliases) {
+        const cleanA = a.toUpperCase();
+        if (quotesMap[cleanA]) return quotesMap[cleanA];
+        if (quotesMap[normalizeStockSymbol(cleanA)]) return quotesMap[normalizeStockSymbol(cleanA)];
       }
       return null;
     }
 
-    // Ultra-fast parallel price fetcher with Cache-First policy
-    async function fetchAllYahooPrices(force = false) {
+    // Apply EOD prices to all active watchlist stocks
+    async function updateEodPrices(force = false) {
       if (state.fetchingPrices) return;
 
       const activeStocks = state.watchlist.filter(r => !r.removed);
-      const cache = loadCachedPrices();
-      const now = Date.now();
-      const FOUR_HOURS = 4 * 3600 * 1000;
-
-      const stocksToFetch = force ? activeStocks : activeStocks.filter(s => {
-        const cached = cache[s.symbol];
-        if (!cached || cached.ltp === null || cached.ltp === undefined) return true;
-        const age = cached.updated_at ? (now - new Date(cached.updated_at).getTime()) : Infinity;
-        return age > FOUR_HOURS;
-      });
-
-      if (!stocksToFetch.length) return;
+      if (!activeStocks.length) return;
 
       state.fetchingPrices = true;
-      state.fetchStatusText = `⚡ Updating prices for ${stocksToFetch.length} stocks...`;
+      state.fetchStatusText = `📊 Loading EOD prices for ${activeStocks.length} stocks...`;
       renderWatchlistPage();
 
+      const quotesMap = await fetchDailyQuotesCSV(force);
+      const cache = loadCachedPrices();
       let updated = 0;
 
-      // 1. Primary ultra-fast batch fetch
-      const batchResults = await fetchBatchPricesFromAPI(stocksToFetch);
-
-      stocksToFetch.forEach(stock => {
-        const sym = stock.symbol.trim().toUpperCase();
-        if (batchResults[sym]) {
-          stock.ltp = batchResults[sym].ltp;
-          stock.pct_change = batchResults[sym].pct_change;
+      activeStocks.forEach(stock => {
+        const quote = findEodQuote(stock.symbol, quotesMap);
+        if (quote && quote.ltp !== null && quote.ltp !== undefined) {
+          stock.ltp = quote.ltp;
+          stock.pct_change = quote.pct_change;
           stock.updated_at = new Date().toISOString();
-          cache[sym] = { ltp: stock.ltp, pct_change: stock.pct_change, updated_at: stock.updated_at };
+          cache[stock.symbol] = { ltp: stock.ltp, pct_change: stock.pct_change, updated_at: stock.updated_at };
           updated++;
         }
       });
 
-      // 2. Fallback for any stock not returned in batch
-      const missingStocks = stocksToFetch.filter(s => !batchResults[s.symbol.trim().toUpperCase()]);
-      if (missingStocks.length) {
-        const missingIndian = missingStocks.filter(s => (s.market || "IN") !== "US");
-        let csvMap = {};
-        if (missingIndian.length) {
-          csvMap = await fetchDailyQuotesCSV();
-        }
-
-        await Promise.all(missingStocks.map(async (stock) => {
-          const sym = stock.symbol.trim().toUpperCase();
-          const norm = normalizeStockSymbol(sym);
-          const isUs = (stock.market || "IN") === "US";
-
-          if (!isUs && (csvMap[sym] || csvMap[norm])) {
-            const item = csvMap[sym] || csvMap[norm];
-            stock.ltp = item.ltp;
-            stock.pct_change = item.pct_change;
-            stock.updated_at = new Date().toISOString();
-            cache[sym] = { ltp: stock.ltp, pct_change: stock.pct_change, updated_at: stock.updated_at };
-            updated++;
-          } else {
-            const res = await fetchYahooPrice(stock.symbol, stock.market || "IN");
-            if (res && res.ltp !== null) {
-              stock.ltp = res.ltp;
-              stock.pct_change = res.pct_change;
-              stock.updated_at = new Date().toISOString();
-              cache[sym] = { ltp: res.ltp, pct_change: res.pct_change, updated_at: stock.updated_at };
-              updated++;
-            }
-          }
-        }));
-      }
-
       saveCachedPrices(cache);
       state.fetchingPrices = false;
-      state.fetchStatusText = `⚡ Prices updated for ${updated} of ${stocksToFetch.length} stocks!`;
+      state.fetchStatusText = updated > 0 ? `✅ EOD prices updated for ${updated} of ${activeStocks.length} stocks` : "";
 
       if (getToken()) {
         saveWatchlist().catch(() => { });
       }
 
-      setTimeout(() => {
-        state.fetchStatusText = "";
-        renderWatchlistPage();
-      }, 2000);
-
-      render();
+      renderWatchlistPage();
+      if (state.fetchStatusText) {
+        setTimeout(() => {
+          state.fetchStatusText = "";
+          renderWatchlistPage();
+        }, 2500);
+      }
     }
 
     async function ensureGist() {
@@ -2561,13 +2423,14 @@
       render();
       if (getToken()) await saveWatchlist();
 
-      // Instantly fetch price for newly added stock
-      fetchYahooPrice(symbol, market).then(data => {
-        if (data && data.ltp !== null) {
-          newStock.ltp = data.ltp;
-          newStock.pct_change = data.pct_change;
+      // Populate EOD price for newly added stock
+      fetchDailyQuotesCSV().then(quotesMap => {
+        const quote = findEodQuote(symbol, quotesMap);
+        if (quote && quote.ltp !== null && quote.ltp !== undefined) {
+          newStock.ltp = quote.ltp;
+          newStock.pct_change = quote.pct_change;
           const cache = loadCachedPrices();
-          cache[symbol] = { ltp: data.ltp, pct_change: data.pct_change, updated_at: new Date().toISOString() };
+          cache[symbol] = { ltp: quote.ltp, pct_change: quote.pct_change, updated_at: new Date().toISOString() };
           saveCachedPrices(cache);
           render();
         }
@@ -4057,17 +3920,17 @@
     <div style="font-weight:700; padding:6px 12px 8px; font-size:12px; color:var(--text-dim); border-bottom:1px solid var(--border); margin-bottom:4px;">
       Account Sync (gist: ${gistId})
     </div>
-    <div class="action-menu-item" id="menuFetchYahooBtn">⚡ Force Refresh All Prices</div>
+    <div class="action-menu-item" id="menuRefreshEodBtn">📊 Refresh EOD Prices</div>
     <div class="action-menu-item" id="menuAddSymbolBtn">➕ Add Symbol to Watchlist</div>
     <div class="action-menu-item" id="menuRefreshBtn">🔄 Refresh Watchlist</div>
     <div style="border-top:1px solid var(--border); margin:4px 0;"></div>
     <div class="action-menu-item danger" id="menuDisconnectBtn">🚪 Disconnect Token</div>
   `;
 
-      document.getElementById("menuFetchYahooBtn").addEventListener("click", () => {
+      document.getElementById("menuRefreshEodBtn").addEventListener("click", () => {
         document.getElementById("popoverBackdrop").classList.remove("open");
         menu.classList.remove("open");
-        fetchAllYahooPrices(true);
+        updateEodPrices(true);
       });
 
       document.getElementById("menuAddSymbolBtn").addEventListener("click", () => {
@@ -4145,8 +4008,8 @@
       render();
       loadWatchlist().then(() => {
         render();
-        // Cache-First: fetch prices only for missing/stale stocks (force = false)
-        fetchAllYahooPrices(false);
+        // Load latest EOD prices from daily quotes CSV
+        updateEodPrices(false);
       }).catch((e) => console.warn("Watchlist load failed", e));
     }
 
